@@ -185,6 +185,10 @@
       border-color: #4caf50;
       box-shadow: 0 0 20px rgba(76,175,80,0.5);
     }
+    .player-slot.spectator {
+      opacity: 0.7;
+      border-color: rgba(100,149,237,0.5);
+    }
     @keyframes pulse {
       0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
       50% { box-shadow: 0 0 30px rgba(255,215,0,0.6); }
@@ -241,6 +245,24 @@
       font-size: 12px;
       font-weight: bold;
     }
+    .spectator-badge {
+      display: inline-block;
+      background: rgba(100,149,237,0.5);
+      color: #a8c5ff;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
+    .ready-badge {
+      display: inline-block;
+      background: rgba(76,175,80,0.5);
+      color: #a5d6a7;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
 
     /* Controls */
     .controls {
@@ -262,7 +284,8 @@
     .btn-raise { background: #ff9800; color: #fff; }
     .btn-allin { background: #e91e63; color: #fff; }
     .btn-quick { background: #555; color: #fff; font-size: 13px; padding: 8px 12px; min-width: 60px; }
-    .btn-fold:hover:not(:disabled), .btn-check:hover:not(:disabled), .btn-call:hover:not(:disabled), .btn-raise:hover:not(:disabled), .btn-allin:hover:not(:disabled), .btn-quick:hover:not(:disabled) {
+    .btn-ready { background: linear-gradient(135deg, #4caf50, #2e7d32); color: #fff; }
+    .btn-fold:hover:not(:disabled), .btn-check:hover:not(:disabled), .btn-call:hover:not(:disabled), .btn-raise:hover:not(:disabled), .btn-allin:hover:not(:disabled), .btn-quick:hover:not(:disabled), .btn-ready:hover:not(:disabled) {
       transform: scale(1.05);
     }
     .raise-controls {
@@ -384,10 +407,17 @@
     .waiting-overlay h2 { color: #ffd700; margin-bottom: 10px; }
     .waiting-overlay p { color: #aaa; }
 
-    .side-pot-label {
-      font-size: 12px;
-      color: #aaa;
-      margin-top: 2px;
+    .spectator-notice {
+      background: rgba(100,149,237,0.2);
+      border: 2px solid rgba(100,149,237,0.5);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .spectator-notice p {
+      color: #a8c5ff;
+      font-size: 14px;
     }
   </style>
 </head>
@@ -410,6 +440,7 @@
         <h1>🃏 德州扑克</h1>
         <div class="info" id="roomInfo"></div>
       </div>
+      <div id="spectatorNotice" style="display:none;"></div>
       <div class="players-grid" id="playersGrid"></div>
       <div class="table" id="table">
         <div class="phase-label" id="phaseLabel"></div>
@@ -441,6 +472,7 @@
     let turnStartTime = 0;
     let isJoining = false;
     let pendingJoin = null;
+    let iAmSpectator = false;
 
     function showStatus(message, type) {
       let statusDiv = document.getElementById('statusMsg');
@@ -462,7 +494,6 @@
     }
 
     socket.on('connect', () => {
-      console.log('Socket connected:', socket.id);
       showStatus('已连接服务器', 'success');
       setTimeout(() => hideStatus(), 1500);
       if (pendingJoin) {
@@ -498,6 +529,7 @@
       turn: '转牌',
       river: '河牌',
       showdown: '摊牌',
+      handEnd: '本局结束',
     };
 
     const ACTION_NAMES = {
@@ -537,10 +569,11 @@
       if (e.key === 'Enter') joinGame();
     });
 
-    socket.on('joined', ({ playerId: pid, roomId }) => {
+    socket.on('joined', ({ playerId: pid, roomId, isSpectator }) => {
       isJoining = false;
       hideStatus();
       playerId = pid;
+      iAmSpectator = isSpectator || false;
       document.getElementById('lobby').style.display = 'none';
       document.getElementById('game').style.display = 'flex';
       document.getElementById('roomInfo').textContent = `房间: ${roomId} | 玩家ID: ${pid.slice(0, 8)}`;
@@ -560,11 +593,25 @@
       document.getElementById('phaseLabel').textContent = PHASE_NAMES[state.phase] || state.phase;
       document.getElementById('potDisplay').textContent = `💰 底池: ${state.pot}`;
 
+      const myIndex = state.players.findIndex(p => p.id === playerId);
+      if (myIndex >= 0) {
+        iAmSpectator = state.players[myIndex].isSpectator;
+      }
+
+      const spectatorNotice = document.getElementById('spectatorNotice');
+      if (iAmSpectator && state.phase !== 'handEnd' && state.phase !== 'waiting') {
+        spectatorNotice.style.display = 'block';
+        spectatorNotice.className = 'spectator-notice';
+        spectatorNotice.innerHTML = `<p>👀 你正在观战，本局结束后可参与下一把</p>`;
+      } else {
+        spectatorNotice.style.display = 'none';
+      }
+
       renderCommunity(state);
       renderPlayers(state);
       renderControls(state);
 
-      if (state.phase === 'showdown' && state.winners.length > 0) {
+      if (state.phase === 'handEnd' && state.winners.length > 0) {
         showResult(state);
       } else {
         hideResult();
@@ -584,7 +631,7 @@
       const community = state.community || [];
       for (let i = 0; i < 5; i++) {
         if (i < community.length) {
-          const isWinning = state.phase === 'showdown' && state.winners.some(w =>
+          const isWinning = state.phase === 'handEnd' && state.winners.some(w =>
             w.hand && w.hand.cards && w.hand.cards.some(c => c.suit === community[i].suit && c.rank === community[i].rank)
           );
           container.appendChild(createCard(community[i], isWinning));
@@ -621,19 +668,20 @@
       state.players.forEach((player, index) => {
         const slot = document.createElement('div');
         slot.className = 'player-slot';
-        if (player.isCurrent && state.phase !== 'showdown' && state.phase !== 'waiting') {
+        if (player.isCurrent && state.phase !== 'handEnd' && state.phase !== 'waiting') {
           slot.classList.add('current');
         }
         if (player.folded) slot.classList.add('folded');
+        if (player.isSpectator) slot.classList.add('spectator');
 
-        if (state.phase === 'showdown' && state.winners.some(w => w.playerIds.includes(player.id))) {
+        if (state.phase === 'handEnd' && state.winners.some(w => w.playerIds.includes(player.id))) {
           slot.classList.add('winner');
         }
 
         let cardsHTML = '';
         if (player.hand && player.hand.length > 0) {
           player.hand.forEach(card => {
-            const isWinning = state.phase === 'showdown' && state.winners.some(w =>
+            const isWinning = state.phase === 'handEnd' && state.winners.some(w =>
               w.hand && w.hand.cards && w.hand.cards.some(c => c.suit === card.suit && c.rank === card.rank)
             );
             const c = createCard(card, isWinning);
@@ -649,22 +697,24 @@
 
         const actionText = player.lastAction ? ACTION_NAMES[player.lastAction] || player.lastAction : '';
         const dealerHTML = player.isDealer ? '<div class="dealer-button">D</div>' : '';
+        const spectatorBadge = player.isSpectator ? '<span class="spectator-badge">观战</span>' : '';
+        const readyBadge = (state.phase === 'handEnd' && player.isReady && !player.isSpectator) ? '<span class="ready-badge">已确认</span>' : '';
 
         slot.innerHTML = `
           ${dealerHTML}
-          <div class="player-name">${escapeHtml(player.name)}${player.id === playerId ? ' (你)' : ''}</div>
+          <div class="player-name">${escapeHtml(player.name)}${player.id === playerId ? ' (你)' : ''}${spectatorBadge}${readyBadge}</div>
           <div class="player-cards">${cardsHTML}</div>
           <div class="player-chips">💰 ${player.chips}</div>
           <div class="player-bet">${player.bet > 0 ? `下注: ${player.bet}` : ''}</div>
           <div class="player-action">${actionText}${player.allIn ? ' | All In' : ''}</div>
-          ${player.isCurrent && state.phase !== 'showdown' && state.phase !== 'waiting' ? '<div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>' : ''}
+          ${player.isCurrent && state.phase !== 'handEnd' && state.phase !== 'waiting' ? '<div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>' : ''}
         `;
 
         grid.appendChild(slot);
       });
 
       const currentPlayer = state.players[state.currentPlayerIndex];
-      if (currentPlayer && currentPlayer.isCurrent && state.phase !== 'showdown' && state.phase !== 'waiting') {
+      if (currentPlayer && currentPlayer.isCurrent && state.phase !== 'handEnd' && state.phase !== 'waiting') {
         startTimer();
       }
     }
@@ -696,10 +746,36 @@
       if (myIndex < 0) return;
 
       const me = state.players[myIndex];
-      const isMyTurn = myIndex === state.currentPlayerIndex && state.phase !== 'waiting' && state.phase !== 'showdown';
+
+      // handEnd phase: show ready button
+      if (state.phase === 'handEnd') {
+        if (iAmSpectator) {
+          container.innerHTML = `<p style="color:#aaa;">本局已结束，等待玩家确认开始下一局...</p>`;
+          return;
+        }
+        if (me.chips <= 0) {
+          container.innerHTML = `<p style="color:#aaa;">你的筹码已用完</p>`;
+          return;
+        }
+        if (me.isReady) {
+          container.innerHTML = `<p style="color:#4caf50;">✅ 你已确认，等待其他玩家...</p>`;
+        } else {
+          const readyBtn = document.createElement('button');
+          readyBtn.className = 'btn btn-ready';
+          readyBtn.textContent = '确认开始下一局';
+          readyBtn.onclick = () => socket.emit('readyForNext');
+          container.appendChild(readyBtn);
+        }
+        return;
+      }
+
+      if (iAmSpectator) {
+        container.innerHTML = `<p style="color:#aaa;">你正在观战，本局结束后可参与下一把</p>`;
+        return;
+      }
 
       if (state.phase === 'waiting') {
-        const count = state.players.filter(p => p.connected).length;
+        const count = state.players.filter(p => p.connected && !p.isSpectator).length;
         if (count < 2) {
           container.innerHTML = `<p style="color:#aaa;">等待其他玩家加入... (当前${count}人, 至少需要2人)</p>`;
         } else {
@@ -712,6 +788,8 @@
         }
         return;
       }
+
+      const isMyTurn = myIndex === state.currentPlayerIndex && state.phase !== 'waiting' && state.phase !== 'handEnd';
 
       if (!isMyTurn || me.folded || me.allIn) {
         container.innerHTML = `<p style="color:#aaa;">${me.folded ? '你已弃牌' : me.allIn ? '你已All In' : '等待其他玩家...'}</p>`;
@@ -745,7 +823,7 @@
       }
 
       // Raise controls
-      if (me.chips > 0) {
+      if (me.chips > 0 && !me.hasRaised) {
         const minRaiseTotal = state.currentBet + state.minRaise;
         const maxRaise = me.chips + me.bet;
         const canMinRaise = maxRaise >= minRaiseTotal;
@@ -789,40 +867,17 @@
         inputGroup.appendChild(plusBtn);
         raiseDiv.appendChild(inputGroup);
 
-        // Quick buttons
-        const quickDiv = document.createElement('div');
-        quickDiv.className = 'quick-buttons';
-
+        // Quick button: min only
         if (canMinRaise) {
+          const quickDiv = document.createElement('div');
+          quickDiv.className = 'quick-buttons';
           const minBtn = document.createElement('button');
           minBtn.className = 'btn btn-quick';
           minBtn.textContent = '最小';
           minBtn.onclick = () => { raiseInput.value = minRaiseTotal; updateRaiseButtons(); };
           quickDiv.appendChild(minBtn);
+          raiseDiv.appendChild(quickDiv);
         }
-
-        if (state.pot > 0 && canMinRaise) {
-          const halfPot = Math.min(maxRaise, Math.floor(state.pot / 2) + me.bet);
-          if (halfPot >= minRaiseTotal) {
-            const halfBtn = document.createElement('button');
-            halfBtn.className = 'btn btn-quick';
-            halfBtn.textContent = '½池';
-            halfBtn.onclick = () => { raiseInput.value = halfPot; updateRaiseButtons(); };
-            quickDiv.appendChild(halfBtn);
-          }
-
-          const potBtn = document.createElement('button');
-          potBtn.className = 'btn btn-quick';
-          potBtn.textContent = '池';
-          potBtn.onclick = () => {
-            const potRaise = Math.min(maxRaise, state.pot + me.bet);
-            raiseInput.value = Math.max(minRaiseTotal, potRaise);
-            updateRaiseButtons();
-          };
-          quickDiv.appendChild(potBtn);
-        }
-
-        raiseDiv.appendChild(quickDiv);
 
         // Raise confirm button
         const raiseBtn = document.createElement('button');
@@ -854,6 +909,8 @@
         }
 
         updateRaiseButtons();
+      } else if (me.hasRaised && me.chips > 0) {
+        container.innerHTML += `<p style="color:#aaa;width:100%;margin-top:8px;">本轮你已加注过，只能跟注或弃牌</p>`;
       }
     }
 
@@ -887,13 +944,11 @@
             }).join('') + '</div>';
         }
 
-        const handName = winner.hand ? winner.name : winner.name;
-
         html += `
           <div class="winner-entry">
             <div class="winner-name">${winnerNames}${potLabel}</div>
             ${cardsHTML}
-            <div class="hand-name">${escapeHtml(handName)}</div>
+            <div class="hand-name">${escapeHtml(winner.name)}</div>
             <div class="win-amount">赢得 ${winner.amount} 筹码</div>
           </div>
         `;
@@ -919,7 +974,7 @@
       overlay.style.left = '50%';
       overlay.style.transform = 'translate(-50%, -50%)';
       overlay.style.zIndex = '5';
-      const count = state.players.filter(p => p.connected).length;
+      const count = state.players.filter(p => p.connected && !p.isSpectator).length;
       overlay.innerHTML = `
         <h2>等待玩家加入</h2>
         <p>当前 ${count} 人在线，至少需要 2 人开始</p>

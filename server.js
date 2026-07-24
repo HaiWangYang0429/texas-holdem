@@ -44,6 +44,7 @@ function createRoom(roomId) {
     lastRaiserIndex: -1,
     winners: [],
     roundActions: 0,
+    readyPlayers: {},
   };
 }
 
@@ -69,6 +70,9 @@ function buildPlayerPublicData(p, i, room, viewerId) {
     cardCount: p.hand ? p.hand.length : 0,
     hand: showHand ? p.hand : null,
     connected: p.connected,
+    isSpectator: p.isSpectator || false,
+    hasRaised: p.hasRaised || false,
+    isReady: room.readyPlayers[p.id] || false,
   };
 }
 
@@ -95,7 +99,10 @@ function broadcastRoomState(room) {
 }
 
 function startNewHand(room) {
-  if (room.players.filter(p => p.connected && p.chips > 0).length < 2) {
+  room.readyPlayers = {};
+
+  const eligiblePlayers = room.players.filter(p => p.connected && !p.isSpectator && p.chips > 0);
+  if (eligiblePlayers.length < 2) {
     room.phase = 'waiting';
     broadcastRoomState(room);
     return;
@@ -117,9 +124,10 @@ function startNewHand(room) {
     p.folded = false;
     p.allIn = false;
     p.lastAction = null;
+    p.hasRaised = false;
   });
 
-  const eligible = room.players.map((p, i) => ({ p, i })).filter(({ p }) => p.connected && p.chips > 0);
+  const eligible = room.players.map((p, i) => ({ p, i })).filter(({ p }) => p.connected && !p.isSpectator && p.chips > 0);
   if (eligible.length < 2) {
     room.phase = 'waiting';
     broadcastRoomState(room);
@@ -127,13 +135,13 @@ function startNewHand(room) {
   }
 
   room.dealerIndex = (room.dealerIndex + 1) % room.players.length;
-  while (!room.players[room.dealerIndex] || room.players[room.dealerIndex].chips <= 0 || !room.players[room.dealerIndex].connected) {
+  while (!room.players[room.dealerIndex] || room.players[room.dealerIndex].chips <= 0 || !room.players[room.dealerIndex].connected || room.players[room.dealerIndex].isSpectator) {
     room.dealerIndex = (room.dealerIndex + 1) % room.players.length;
   }
 
   const playerCount = room.players.length;
 
-  const activeEligible = room.players.filter(p => p.connected && p.chips > 0);
+  const activeEligible = room.players.filter(p => p.connected && !p.isSpectator && p.chips > 0);
   const isHeadsUp = activeEligible.length === 2;
 
   let sbIndex, bbIndex;
@@ -141,16 +149,16 @@ function startNewHand(room) {
   if (isHeadsUp) {
     sbIndex = room.dealerIndex;
     bbIndex = (sbIndex + 1) % playerCount;
-    while (room.players[bbIndex].chips <= 0 || !room.players[bbIndex].connected) {
+    while (room.players[bbIndex].chips <= 0 || !room.players[bbIndex].connected || room.players[bbIndex].isSpectator) {
       bbIndex = (bbIndex + 1) % playerCount;
     }
   } else {
     sbIndex = (room.dealerIndex + 1) % playerCount;
-    while (room.players[sbIndex].chips <= 0 || !room.players[sbIndex].connected) {
+    while (room.players[sbIndex].chips <= 0 || !room.players[sbIndex].connected || room.players[sbIndex].isSpectator) {
       sbIndex = (sbIndex + 1) % playerCount;
     }
     bbIndex = (sbIndex + 1) % playerCount;
-    while (room.players[bbIndex].chips <= 0 || !room.players[bbIndex].connected) {
+    while (room.players[bbIndex].chips <= 0 || !room.players[bbIndex].connected || room.players[bbIndex].isSpectator) {
       bbIndex = (bbIndex + 1) % playerCount;
     }
   }
@@ -168,11 +176,11 @@ function startNewHand(room) {
 
   room.activePlayers = room.players
     .map((p, i) => ({ p, i }))
-    .filter(({ p }) => p.connected && (p.chips > 0 || p.bet > 0))
+    .filter(({ p }) => p.connected && !p.isSpectator && (p.chips > 0 || p.bet > 0))
     .map(({ i }) => i);
 
   room.players.forEach((p, i) => {
-    if (p.connected && p.chips > 0) {
+    if (p.connected && !p.isSpectator && p.chips > 0) {
       p.hand = dealHand(room.deck);
     }
   });
@@ -185,7 +193,13 @@ function startNewHand(room) {
     room.currentPlayerIndex = (bbIndex + 1) % playerCount;
   }
 
-  while (room.players[room.currentPlayerIndex].folded || room.players[room.currentPlayerIndex].chips <= 0 || !room.players[room.currentPlayerIndex].connected || room.players[room.currentPlayerIndex].allIn) {
+  while (
+    room.players[room.currentPlayerIndex].folded ||
+    room.players[room.currentPlayerIndex].chips <= 0 ||
+    !room.players[room.currentPlayerIndex].connected ||
+    room.players[room.currentPlayerIndex].allIn ||
+    room.players[room.currentPlayerIndex].isSpectator
+  ) {
     room.currentPlayerIndex = (room.currentPlayerIndex + 1) % playerCount;
   }
 
@@ -196,7 +210,7 @@ function startNewHand(room) {
 function startTurnTimer(room) {
   if (room.turnTimer) clearTimeout(room.turnTimer);
   room.turnTimer = setTimeout(() => {
-    if (room.phase !== 'waiting' && room.phase !== 'showdown' && room.currentPlayerIndex >= 0) {
+    if (room.phase !== 'waiting' && room.phase !== 'showdown' && room.phase !== 'handEnd' && room.currentPlayerIndex >= 0) {
       const currentP = room.players[room.currentPlayerIndex];
       if (currentP && currentP.connected && !currentP.folded && !currentP.allIn) {
         handlePlayerAction(room, currentP.id, 'fold');
@@ -212,7 +226,7 @@ function nextPlayer(room) {
   let attempts = 0;
   while (attempts < playerCount) {
     const p = room.players[next];
-    if (p.connected && !p.folded && !p.allIn && p.chips > 0) {
+    if (p.connected && !p.folded && !p.allIn && p.chips > 0 && !p.isSpectator) {
       room.currentPlayerIndex = next;
       room.roundActions++;
       broadcastRoomState(room);
@@ -229,12 +243,12 @@ function nextPlayer(room) {
 function isBettingRoundComplete(room) {
   const activeIndices = room.players
     .map((p, i) => ({ p, i }))
-    .filter(({ p }) => p.connected && !p.folded && !p.allIn && p.chips > 0)
+    .filter(({ p }) => p.connected && !p.folded && !p.allIn && p.chips > 0 && !p.isSpectator)
     .map(({ i }) => i);
 
   if (activeIndices.length === 0) return true;
 
-  const stillIn = room.players.filter(p => !p.folded && p.connected);
+  const stillIn = room.players.filter(p => !p.folded && p.connected && !p.isSpectator);
   if (stillIn.length <= 1) return true;
 
   const allMatched = activeIndices.every(i => room.players[i].bet === room.currentBet || room.players[i].allIn);
@@ -246,7 +260,7 @@ function isBettingRoundComplete(room) {
 function advancePhase(room) {
   if (room.turnTimer) clearTimeout(room.turnTimer);
 
-  if (room.players.filter(p => !p.folded && p.connected).length <= 1) {
+  if (room.players.filter(p => !p.folded && p.connected && !p.isSpectator).length <= 1) {
     showdown(room);
     return;
   }
@@ -254,6 +268,7 @@ function advancePhase(room) {
   room.players.forEach(p => {
     p.bet = 0;
     p.lastAction = null;
+    p.hasRaised = false;
   });
   room.currentBet = 0;
   room.minRaise = BIG_BLIND;
@@ -280,15 +295,16 @@ function advancePhase(room) {
     room.players[room.currentPlayerIndex].folded ||
     room.players[room.currentPlayerIndex].chips <= 0 ||
     !room.players[room.currentPlayerIndex].connected ||
-    room.players[room.currentPlayerIndex].allIn
+    room.players[room.currentPlayerIndex].allIn ||
+    room.players[room.currentPlayerIndex].isSpectator
   ) {
     room.currentPlayerIndex = (room.currentPlayerIndex + 1) % playerCount;
-    if (room.players.filter(p => !p.folded && p.connected && !p.allIn && p.chips > 0).length === 0) break;
+    if (room.players.filter(p => !p.folded && p.connected && !p.allIn && p.chips > 0 && !p.isSpectator).length === 0) break;
   }
 
   broadcastRoomState(room);
 
-  const canStillAct = room.players.filter(p => !p.folded && p.connected && !p.allIn && p.chips > 0);
+  const canStillAct = room.players.filter(p => !p.folded && p.connected && !p.allIn && p.chips > 0 && !p.isSpectator);
   if (canStillAct.length <= 1) {
     setTimeout(() => advancePhase(room), 1500);
   } else {
@@ -328,12 +344,11 @@ function showdown(room) {
     room.community.push(...dealCommunity(room.deck, 1));
   }
 
-  const stillInPlayers = room.players.filter(p => !p.folded && p.connected && p.hand);
+  const stillInPlayers = room.players.filter(p => !p.folded && p.connected && p.hand && !p.isSpectator);
 
   if (stillInPlayers.length === 0) {
-    room.phase = 'showdown';
+    room.phase = 'handEnd';
     broadcastRoomState(room);
-    setTimeout(() => startNewHand(room), 5000);
     return;
   }
 
@@ -341,9 +356,8 @@ function showdown(room) {
     const winner = stillInPlayers[0];
     winner.chips += room.pot;
     room.winners = [{ playerIds: [winner.id], hand: null, name: '其他玩家弃牌', amount: room.pot, potIndex: 0 }];
-    room.phase = 'showdown';
+    room.phase = 'handEnd';
     broadcastRoomState(room);
-    setTimeout(() => startNewHand(room), 5000);
     return;
   }
 
@@ -352,7 +366,7 @@ function showdown(room) {
 
   for (let potIdx = 0; potIdx < pots.length; potIdx++) {
     const pot = pots[potIdx];
-    const eligible = pot.eligiblePlayers.filter(p => !p.folded && p.connected && p.hand);
+    const eligible = pot.eligiblePlayers.filter(p => !p.folded && p.connected && p.hand && !p.isSpectator);
 
     if (eligible.length === 0) continue;
     if (eligible.length === 1) {
@@ -396,19 +410,30 @@ function showdown(room) {
   }
 
   room.winners = allResults;
-  room.phase = 'showdown';
+  room.phase = 'handEnd';
   broadcastRoomState(room);
+}
 
-  setTimeout(() => startNewHand(room), 6000);
+function checkAllReady(room) {
+  const activePlayers = room.players.filter(p => p.connected && !p.isSpectator && p.chips > 0);
+  if (activePlayers.length < 2) {
+    room.phase = 'waiting';
+    broadcastRoomState(room);
+    return;
+  }
+  const allReady = activePlayers.every(p => room.readyPlayers[p.id]);
+  if (allReady) {
+    startNewHand(room);
+  }
 }
 
 function handlePlayerAction(room, playerId, action, amount) {
   const playerIndex = room.players.findIndex(p => p.id === playerId);
   if (playerIndex !== room.currentPlayerIndex) return false;
-  if (room.phase === 'waiting' || room.phase === 'showdown') return false;
+  if (room.phase === 'waiting' || room.phase === 'showdown' || room.phase === 'handEnd') return false;
 
   const player = room.players[playerIndex];
-  if (player.folded || player.allIn) return false;
+  if (player.folded || player.allIn || player.isSpectator) return false;
 
   if (action === 'fold') {
     player.folded = true;
@@ -426,6 +451,8 @@ function handlePlayerAction(room, playerId, action, amount) {
     if (player.chips === 0) player.allIn = true;
     player.lastAction = 'call';
   } else if (action === 'raise') {
+    if (player.hasRaised) return false;
+
     const totalRequired = amount;
     if (totalRequired <= player.bet) return false;
     if (totalRequired < room.currentBet + room.minRaise && totalRequired < player.chips + player.bet) return false;
@@ -441,7 +468,7 @@ function handlePlayerAction(room, playerId, action, amount) {
       const raiseIncrement = player.bet - room.currentBet;
       if (raiseIncrement >= room.minRaise) {
         room.players.forEach((p, i) => {
-          if (i !== playerIndex && !p.folded && !p.allIn) {
+          if (i !== playerIndex && !p.folded && !p.allIn && !p.isSpectator) {
             p.lastAction = null;
           }
         });
@@ -452,6 +479,7 @@ function handlePlayerAction(room, playerId, action, amount) {
     }
 
     if (player.chips === 0) player.allIn = true;
+    player.hasRaised = true;
     player.lastAction = 'raise';
   }
 
@@ -471,6 +499,8 @@ io.on('connection', (socket) => {
 
   socket.on('joinRoom', ({ roomId, name }) => {
     const room = getOrCreateRoom(roomId || 'default');
+
+    const isInGame = room.phase !== 'waiting' && room.phase !== 'handEnd';
 
     const existingIndex = room.players.findIndex(p => p.name === name && !p.connected);
     if (existingIndex >= 0) {
@@ -497,16 +527,18 @@ io.on('connection', (socket) => {
           allIn: false,
           connected: true,
           lastAction: null,
+          hasRaised: false,
+          isSpectator: isInGame,
         });
       }
     }
 
     socket.roomId = room.id;
     socket.join(room.id);
-    socket.emit('joined', { playerId: socket.id, roomId: room.id });
+    socket.emit('joined', { playerId: socket.id, roomId: room.id, isSpectator: isInGame });
     broadcastRoomState(room);
 
-    if (room.phase === 'waiting' && room.players.filter(p => p.connected && p.chips > 0).length >= 2) {
+    if (room.phase === 'waiting' && room.players.filter(p => p.connected && !p.isSpectator && p.chips > 0).length >= 2) {
       setTimeout(() => {
         if (room.phase === 'waiting') startNewHand(room);
       }, 2000);
@@ -520,10 +552,19 @@ io.on('connection', (socket) => {
     broadcastRoomState(room);
   });
 
+  socket.on('readyForNext', () => {
+    const room = rooms[socket.roomId];
+    if (!room) return;
+    if (room.phase !== 'handEnd') return;
+    room.readyPlayers[socket.id] = true;
+    broadcastRoomState(room);
+    checkAllReady(room);
+  });
+
   socket.on('startGame', () => {
     const room = rooms[socket.roomId];
     if (!room) return;
-    if (room.phase === 'waiting' && room.players.filter(p => p.connected && p.chips > 0).length >= 2) {
+    if (room.phase === 'waiting' && room.players.filter(p => p.connected && !p.isSpectator && p.chips > 0).length >= 2) {
       startNewHand(room);
     }
   });
@@ -537,14 +578,19 @@ io.on('connection', (socket) => {
     if (playerIndex >= 0) {
       room.players[playerIndex].connected = false;
       room.players[playerIndex].folded = true;
+      delete room.readyPlayers[socket.id];
 
-      if (room.currentPlayerIndex === playerIndex && room.phase !== 'waiting' && room.phase !== 'showdown') {
+      if (room.currentPlayerIndex === playerIndex && room.phase !== 'waiting' && room.phase !== 'showdown' && room.phase !== 'handEnd') {
         if (room.turnTimer) clearTimeout(room.turnTimer);
         if (isBettingRoundComplete(room)) {
           advancePhase(room);
         } else {
           nextPlayer(room);
         }
+      }
+
+      if (room.phase === 'handEnd') {
+        checkAllReady(room);
       }
 
       broadcastRoomState(room);
