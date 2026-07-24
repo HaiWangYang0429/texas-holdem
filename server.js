@@ -6,7 +6,15 @@ const { createDeck, shuffle, dealHand, dealCommunity, evaluateHand, compareHands
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, {
+  cors: { origin: '*' },
+  pingInterval: 10000,
+  pingTimeout: 5000,
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  maxHttpBufferSize: 1e6,
+  connectTimeout: 30000,
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -349,30 +357,37 @@ io.on('connection', (socket) => {
 
   socket.on('joinRoom', ({ roomId, name }) => {
     const room = getOrCreateRoom(roomId || 'default');
-    socket.roomId = room.id;
 
-    const existingIndex = room.players.findIndex(p => p.id === socket.id);
+    const existingIndex = room.players.findIndex(p => p.name === name && !p.connected);
     if (existingIndex >= 0) {
+      room.players[existingIndex].id = socket.id;
       room.players[existingIndex].connected = true;
+      room.players[existingIndex].folded = false;
     } else {
-      if (room.players.length >= MAX_PLAYERS) {
-        socket.emit('error', { message: '房间已满（最多8人）' });
-        return;
+      const existingSocketIndex = room.players.findIndex(p => p.id === socket.id);
+      if (existingSocketIndex >= 0) {
+        room.players[existingSocketIndex].connected = true;
+      } else {
+        if (room.players.length >= MAX_PLAYERS) {
+          socket.emit('error', { message: '房间已满（最多8人）' });
+          return;
+        }
+        room.players.push({
+          id: socket.id,
+          name: name || `玩家${room.players.length + 1}`,
+          chips: STARTING_CHIPS,
+          hand: null,
+          bet: 0,
+          totalBet: 0,
+          folded: false,
+          allIn: false,
+          connected: true,
+          lastAction: null,
+        });
       }
-      room.players.push({
-        id: socket.id,
-        name: name || `玩家${room.players.length + 1}`,
-        chips: STARTING_CHIPS,
-        hand: null,
-        bet: 0,
-        totalBet: 0,
-        folded: false,
-        allIn: false,
-        connected: true,
-        lastAction: null,
-      });
     }
 
+    socket.roomId = room.id;
     socket.join(room.id);
     socket.emit('joined', { playerId: socket.id, roomId: room.id });
     broadcastRoomState(room);

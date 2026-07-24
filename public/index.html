@@ -342,7 +342,7 @@
         <h2>🃏 德州扑克</h2>
         <p style="color:#aaa;margin-bottom:20px;font-size:14px;">多人在线德州扑克对战</p>
         <input id="nameInput" type="text" placeholder="输入你的昵称" maxlength="12" />
-        <input id="roomInput" type="text" placeholder="房间号 (可选，默认default)" maxlength="20" />
+        <input id="roomInput" type="text" placeholder="房间号 (和朋友输入一样的房间号即可同桌)" maxlength="20" />
         <button class="btn btn-primary" id="joinBtn" onclick="joinGame()">进入游戏</button>
       </div>
     </div>
@@ -367,12 +367,80 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io();
+    const RECONNECT_DELAYS = [1000, 2000, 5000, 10000, 20000, 30000];
+    let reconnectAttempts = 0;
+
+    const socket = io({
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 30000,
+      timeout: 30000,
+      forceNew: true,
+    });
+
     let playerId = null;
     let currentRoomId = null;
     let gameState = null;
     let timerInterval = null;
     let turnStartTime = 0;
+    let isJoining = false;
+    let pendingJoin = null;
+
+    function showStatus(message, type) {
+      let statusDiv = document.getElementById('statusMsg');
+      if (!statusDiv) {
+        statusDiv = document.createElement('div');
+        statusDiv.id = 'statusMsg';
+        statusDiv.style.cssText = 'padding:8px 16px;border-radius:8px;text-align:center;margin-top:10px;font-size:14px;';
+        const card = document.querySelector('.lobby-card');
+        if (card) card.appendChild(statusDiv);
+      }
+      statusDiv.style.background = type === 'error' ? 'rgba(211,47,47,0.5)' : type === 'success' ? 'rgba(76,175,80,0.5)' : 'rgba(255,215,0,0.3)';
+      statusDiv.style.color = type === 'error' ? '#ff6b6b' : type === 'success' ? '#81c784' : '#ffd700';
+      statusDiv.textContent = message;
+    }
+
+    function hideStatus() {
+      const statusDiv = document.getElementById('statusMsg');
+      if (statusDiv) statusDiv.remove();
+    }
+
+    socket.on('connect', () => {
+      console.log('Socket connected:', socket.id);
+      reconnectAttempts = 0;
+      showStatus('已连接服务器', 'success');
+      setTimeout(() => hideStatus(), 1500);
+      if (pendingJoin) {
+        const { name, room } = pendingJoin;
+        pendingJoin = null;
+        socket.emit('joinRoom', { roomId: room, name });
+      }
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('Connection error:', err.message);
+      showStatus('连接服务器失败，正在重连...', 'error');
+    });
+
+    socket.on('reconnect_attempt', (attempt) => {
+      console.log('Reconnect attempt:', attempt);
+      showStatus(`正在重连... (第${attempt}次)`, 'error');
+    });
+
+    socket.on('reconnect', (attempt) => {
+      console.log('Reconnected after', attempt, 'attempts');
+      showStatus('重连成功', 'success');
+      setTimeout(() => hideStatus(), 1500);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Disconnected:', reason);
+      if (reason !== 'io client disconnect') {
+        showStatus('连接断开，正在重连...', 'error');
+      }
+    });
 
     const PHASE_NAMES = {
       waiting: '等待中',
@@ -394,7 +462,23 @@
       const name = document.getElementById('nameInput').value.trim() || '匿名玩家';
       const room = document.getElementById('roomInput').value.trim() || 'default';
       currentRoomId = room;
+
+      if (!socket.connected) {
+        showStatus('正在连接服务器，请稍候...', 'error');
+        pendingJoin = { name, room };
+        return;
+      }
+
+      isJoining = true;
+      showStatus('正在加入房间...', 'error');
       socket.emit('joinRoom', { roomId: room, name });
+
+      setTimeout(() => {
+        if (isJoining) {
+          isJoining = false;
+          showStatus('加入房间超时，请重试', 'error');
+        }
+      }, 10000);
     }
 
     document.getElementById('nameInput').addEventListener('keypress', e => {
@@ -405,6 +489,8 @@
     });
 
     socket.on('joined', ({ playerId: pid, roomId }) => {
+      isJoining = false;
+      hideStatus();
       playerId = pid;
       document.getElementById('lobby').style.display = 'none';
       document.getElementById('game').style.display = 'flex';
@@ -417,7 +503,8 @@
     });
 
     socket.on('error', ({ message }) => {
-      alert(message);
+      isJoining = false;
+      showStatus(message, 'error');
     });
 
     function renderGame(state) {
