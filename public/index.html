@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>德州扑克 - 在线对战</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: radial-gradient(ellipse at center, #1a6b3c 0%, #0d4a28 50%, #062816 100%);
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #fff;
+      overflow-x: hidden;
+    }
+    #app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      text-align: center;
+      padding: 10px 0 20px;
+    }
+    .header h1 {
+      font-size: 24px;
+      color: #ffd700;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    .header .info {
+      font-size: 13px;
+      color: #aaa;
+      margin-top: 5px;
+    }
+
+    /* Lobby */
+    .lobby {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+    .lobby-card {
+      background: rgba(0,0,0,0.4);
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    .lobby-card h2 { font-size: 20px; margin-bottom: 20px; color: #ffd700; }
+    .lobby-card input {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 2px solid #333;
+      background: #1a1a2e;
+      color: #fff;
+      font-size: 16px;
+      margin-bottom: 10px;
+      outline: none;
+    }
+    .lobby-card input:focus { border-color: #ffd700; }
+    .btn {
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #ffd700, #ffa500);
+      color: #333;
+      width: 100%;
+    }
+    .btn-primary:hover { transform: scale(1.02); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Game Table */
+    .game-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .table {
+      flex: 1;
+      position: relative;
+      background: radial-gradient(ellipse at center, #2a8a4a 0%, #1a6b3c 70%, #0d4a28 100%);
+      border-radius: 200px;
+      border: 8px solid #5a3a1a;
+      box-shadow: 0 0 40px rgba(0,0,0,0.6), inset 0 0 60px rgba(0,0,0,0.3);
+      min-height: 400px;
+      margin: 20px 0;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Community area */
+    .community {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .community-cards {
+      display: flex;
+      gap: 8px;
+      min-height: 100px;
+    }
+    .pot-display {
+      background: rgba(0,0,0,0.5);
+      padding: 6px 20px;
+      border-radius: 20px;
+      font-size: 18px;
+      color: #ffd700;
+      font-weight: bold;
+    }
+
+    /* Card */
+    .card {
+      width: 60px;
+      height: 88px;
+      border-radius: 6px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      position: relative;
+      transition: transform 0.3s;
+    }
+    .card.red { color: #d32f2f; }
+    .card.black { color: #1a1a1a; }
+    .card .rank { font-size: 16px; font-weight: bold; line-height: 1; }
+    .card .suit { font-size: 22px; text-align: center; line-height: 1; }
+    .card .rank-bottom { font-size: 16px; font-weight: bold; text-align: right; transform: rotate(180deg); line-height: 1; }
+    .card.back {
+      background: repeating-linear-gradient(45deg, #4a3060, #4a3060 6px, #3a2548 6px, #3a2548 12px);
+      border: 2px solid #5a4070;
+    }
+    .card.winning {
+      box-shadow: 0 0 20px #ffd700, 0 2px 8px rgba(0,0,0,0.4);
+      transform: translateY(-5px);
+    }
+    .card-placeholder {
+      width: 60px;
+      height: 88px;
+      border: 2px dashed rgba(255,255,255,0.2);
+      border-radius: 6px;
+    }
+
+    /* Players */
+    .players-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .player-slot {
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      border: 2px solid transparent;
+      transition: all 0.3s;
+      position: relative;
+    }
+    .player-slot.current {
+      border-color: #ffd700;
+      box-shadow: 0 0 20px rgba(255,215,0,0.3);
+      animation: pulse 1.5s infinite;
+    }
+    .player-slot.folded { opacity: 0.4; }
+    .player-slot.winner {
+      border-color: #4caf50;
+      box-shadow: 0 0 20px rgba(76,175,80,0.5);
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+      50% { box-shadow: 0 0 30px rgba(255,215,0,0.6); }
+    }
+    .player-name {
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .player-chips {
+      font-size: 14px;
+      color: #ffd700;
+    }
+    .player-bet {
+      font-size: 12px;
+      color: #ff9800;
+      margin-top: 2px;
+    }
+    .player-cards {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+      margin: 6px 0;
+      min-height: 50px;
+    }
+    .player-cards .card {
+      width: 36px;
+      height: 52px;
+    }
+    .player-cards .card .rank { font-size: 11px; }
+    .player-cards .card .suit { font-size: 14px; }
+    .player-cards .card .rank-bottom { font-size: 11px; }
+    .player-cards .card-placeholder {
+      width: 36px;
+      height: 52px;
+    }
+    .player-action {
+      font-size: 11px;
+      color: #aaa;
+      height: 14px;
+    }
+    .dealer-button {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 22px;
+      height: 22px;
+      background: #fff;
+      color: #333;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    /* Controls */
+    .controls {
+      background: rgba(0,0,0,0.4);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .controls .btn {
+      min-width: 100px;
+    }
+    .btn-fold { background: #d32f2f; color: #fff; }
+    .btn-check { background: #4caf50; color: #fff; }
+    .btn-call { background: #2196f3; color: #fff; }
+    .btn-raise { background: #ff9800; color: #fff; }
+    .btn-fold:hover:not(:disabled), .btn-check:hover:not(:disabled), .btn-call:hover:not(:disabled), .btn-raise:hover:not(:disabled) {
+      transform: scale(1.05);
+    }
+    .raise-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .raise-controls input[type=range] {
+      width: 150px;
+    }
+    .raise-value {
+      min-width: 60px;
+      text-align: center;
+      font-weight: bold;
+      color: #ffd700;
+    }
+    .timer-bar {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+    .timer-fill {
+      height: 100%;
+      background: #ffd700;
+      width: 100%;
+      transition: width linear;
+    }
+
+    /* Result overlay */
+    .result-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .result-box {
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border-radius: 16px;
+      padding: 30px 50px;
+      text-align: center;
+      border: 2px solid #ffd700;
+    }
+    .result-box h2 { color: #ffd700; font-size: 24px; margin-bottom: 10px; }
+    .result-box p { font-size: 18px; margin-bottom: 8px; }
+    .result-box .hand-name { color: #4caf50; font-size: 20px; font-weight: bold; }
+
+    .phase-label {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.5);
+      padding: 4px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      color: #ffd700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .waiting-overlay {
+      text-align: center;
+      padding: 30px;
+    }
+    .waiting-overlay h2 { color: #ffd700; margin-bottom: 10px; }
+    .waiting-overlay p { color: #aaa; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Lobby -->
+    <div id="lobby" class="lobby">
+      <div class="lobby-card">
+        <h2>🃏 德州扑克</h2>
+        <p style="color:#aaa;margin-bottom:20px;font-size:14px;">多人在线德州扑克对战</p>
+        <input id="nameInput" type="text" placeholder="输入你的昵称" maxlength="12" />
+        <input id="roomInput" type="text" placeholder="房间号 (可选，默认default)" maxlength="20" />
+        <button class="btn btn-primary" id="joinBtn" onclick="joinGame()">进入游戏</button>
+      </div>
+    </div>
+
+    <!-- Game -->
+    <div id="game" class="game-container" style="display:none;">
+      <div class="header">
+        <h1>🃏 德州扑克</h1>
+        <div class="info" id="roomInfo"></div>
+      </div>
+      <div class="players-grid" id="playersGrid"></div>
+      <div class="table" id="table">
+        <div class="phase-label" id="phaseLabel"></div>
+        <div class="community">
+          <div class="community-cards" id="communityCards"></div>
+          <div class="pot-display" id="potDisplay"></div>
+        </div>
+      </div>
+      <div class="controls" id="controls"></div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let playerId = null;
+    let currentRoomId = null;
+    let gameState = null;
+    let timerInterval = null;
+    let turnStartTime = 0;
+
+    const PHASE_NAMES = {
+      waiting: '等待中',
+      preflop: '翻牌前',
+      flop: '翻牌',
+      turn: '转牌',
+      river: '河牌',
+      showdown: '摊牌',
+    };
+
+    const ACTION_NAMES = {
+      fold: '弃牌',
+      check: '过牌',
+      call: '跟注',
+      raise: '加注',
+    };
+
+    function joinGame() {
+      const name = document.getElementById('nameInput').value.trim() || '匿名玩家';
+      const room = document.getElementById('roomInput').value.trim() || 'default';
+      currentRoomId = room;
+      socket.emit('joinRoom', { roomId: room, name });
+    }
+
+    document.getElementById('nameInput').addEventListener('keypress', e => {
+      if (e.key === 'Enter') joinGame();
+    });
+    document.getElementById('roomInput').addEventListener('keypress', e => {
+      if (e.key === 'Enter') joinGame();
+    });
+
+    socket.on('joined', ({ playerId: pid, roomId }) => {
+      playerId = pid;
+      document.getElementById('lobby').style.display = 'none';
+      document.getElementById('game').style.display = 'flex';
+      document.getElementById('roomInfo').textContent = `房间: ${roomId} | 玩家ID: ${pid.slice(0, 8)}`;
+    });
+
+    socket.on('gameState', (state) => {
+      gameState = state;
+      renderGame(state);
+    });
+
+    socket.on('error', ({ message }) => {
+      alert(message);
+    });
+
+    function renderGame(state) {
+      document.getElementById('phaseLabel').textContent = PHASE_NAMES[state.phase] || state.phase;
+      document.getElementById('potDisplay').textContent = `💰 底池: ${state.pot}`;
+
+      renderCommunity(state);
+      renderPlayers(state);
+      renderControls(state);
+
+      if (state.phase === 'showdown' && state.winners.length > 0) {
+        showResult(state);
+      } else {
+        hideResult();
+      }
+
+      if (state.phase === 'waiting') {
+        showWaiting(state);
+      } else {
+        hideWaiting();
+      }
+    }
+
+    function renderCommunity(state) {
+      const container = document.getElementById('communityCards');
+      container.innerHTML = '';
+
+      const community = state.community || [];
+      for (let i = 0; i < 5; i++) {
+        if (i < community.length) {
+          const isWinning = state.phase === 'showdown' && state.winners[0] && state.winners[0].hand &&
+            state.winners[0].hand.cards && state.winners[0].hand.cards.some(c => c.suit === community[i].suit && c.rank === community[i].rank);
+          container.appendChild(createCard(community[i], isWinning));
+        } else {
+          const ph = document.createElement('div');
+          ph.className = 'card-placeholder';
+          container.appendChild(ph);
+        }
+      }
+    }
+
+    function createCard(card, isWinning) {
+      const div = document.createElement('div');
+      div.className = `card ${card.suit === '♥' || card.suit === '♦' ? 'red' : 'black'}`;
+      if (isWinning) div.classList.add('winning');
+      div.innerHTML = `
+        <div class="rank">${card.rank}<span style="font-size:12px;">${card.suit}</span></div>
+        <div class="suit">${card.suit}</div>
+        <div class="rank-bottom">${card.rank}<span style="font-size:12px;">${card.suit}</span></div>
+      `;
+      return div;
+    }
+
+    function createCardBack() {
+      const div = document.createElement('div');
+      div.className = 'card back';
+      return div;
+    }
+
+    function renderPlayers(state) {
+      const grid = document.getElementById('playersGrid');
+      grid.innerHTML = '';
+
+      state.players.forEach((player, index) => {
+        const slot = document.createElement('div');
+        slot.className = 'player-slot';
+        if (player.isCurrent && state.phase !== 'showdown' && state.phase !== 'waiting') {
+          slot.classList.add('current');
+        }
+        if (player.folded) slot.classList.add('folded');
+        if (state.phase === 'showdown' && state.winners[0] && state.winners[0].playerIds.includes(player.id)) {
+          slot.classList.add('winner');
+        }
+
+        let cardsHTML = '';
+        if (player.hand && player.hand.length > 0) {
+          const showCards = player.id === playerId || state.phase === 'showdown' || !player.folded;
+          if (showCards) {
+            player.hand.forEach(card => {
+              const isWinning = state.phase === 'showdown' && state.winners[0] && state.winners[0].hand &&
+                state.winners[0].hand.cards && state.winners[0].hand.cards.some(c => c.suit === card.suit && c.rank === card.rank);
+              const c = createCard(card, isWinning);
+              cardsHTML += c.outerHTML;
+            });
+          } else {
+            for (let i = 0; i < player.hand.length; i++) {
+              cardsHTML += createCardBack().outerHTML;
+            }
+          }
+        } else if (player.cardCount > 0) {
+          for (let i = 0; i < player.cardCount; i++) {
+            cardsHTML += createCardBack().outerHTML;
+          }
+        } else {
+          cardsHTML = '<div></div>';
+        }
+
+        const actionText = player.lastAction ? ACTION_NAMES[player.lastAction] || player.lastAction : '';
+        const dealerHTML = player.isDealer ? '<div class="dealer-button">D</div>' : '';
+
+        slot.innerHTML = `
+          ${dealerHTML}
+          <div class="player-name">${escapeHtml(player.name)}${player.id === playerId ? ' (你)' : ''}</div>
+          <div class="player-cards">${cardsHTML}</div>
+          <div class="player-chips">💰 ${player.chips}</div>
+          <div class="player-bet">${player.bet > 0 ? `下注: ${player.bet}` : ''}</div>
+          <div class="player-action">${actionText}${player.allIn ? ' | All In' : ''}</div>
+          ${player.isCurrent && state.phase !== 'showdown' && state.phase !== 'waiting' ? '<div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>' : ''}
+        `;
+
+        grid.appendChild(slot);
+      });
+
+      const currentPlayer = state.players[state.currentPlayerIndex];
+      if (currentPlayer && currentPlayer.isCurrent && state.phase !== 'showdown' && state.phase !== 'waiting') {
+        startTimer();
+      }
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      turnStartTime = Date.now();
+      const duration = 30000;
+
+      timerInterval = setInterval(() => {
+        const elapsed = Date.now() - turnStartTime;
+        const remaining = Math.max(0, duration - elapsed);
+        const pct = (remaining / duration) * 100;
+        const fill = document.getElementById('timerFill');
+        if (fill) {
+          fill.style.width = pct + '%';
+          fill.style.transition = 'width 0.1s linear';
+        } else {
+          clearInterval(timerInterval);
+        }
+      }, 100);
+    }
+
+    function renderControls(state) {
+      const container = document.getElementById('controls');
+      container.innerHTML = '';
+
+      const myIndex = state.players.findIndex(p => p.id === playerId);
+      if (myIndex < 0) return;
+
+      const me = state.players[myIndex];
+      const isMyTurn = myIndex === state.currentPlayerIndex && state.phase !== 'waiting' && state.phase !== 'showdown';
+
+      if (state.phase === 'waiting') {
+        const count = state.players.filter(p => p.connected).length;
+        if (count < 2) {
+          container.innerHTML = `<p style="color:#aaa;">等待其他玩家加入... (当前${count}人, 至少需要2人)</p>`;
+        } else {
+          const btn = document.createElement('button');
+          btn.className = 'btn btn-primary';
+          btn.textContent = '开始游戏';
+          btn.onclick = () => socket.emit('startGame');
+          container.appendChild(btn);
+        }
+        return;
+      }
+
+      if (!isMyTurn || me.folded || me.allIn) {
+        container.innerHTML = `<p style="color:#aaa;">${me.folded ? '你已弃牌' : me.allIn ? '你已All In' : '等待其他玩家...'}</p>`;
+        return;
+      }
+
+      const toCall = state.currentBet - me.bet;
+
+      // Fold
+      const foldBtn = document.createElement('button');
+      foldBtn.className = 'btn btn-fold';
+      foldBtn.textContent = '弃牌';
+      foldBtn.onclick = () => socket.emit('action', { action: 'fold' });
+      container.appendChild(foldBtn);
+
+      // Check / Call
+      if (toCall === 0) {
+        const checkBtn = document.createElement('button');
+        checkBtn.className = 'btn btn-check';
+        checkBtn.textContent = '过牌';
+        checkBtn.onclick = () => socket.emit('action', { action: 'check' });
+        container.appendChild(checkBtn);
+      } else {
+        const callBtn = document.createElement('button');
+        callBtn.className = 'btn btn-call';
+        const callAmount = Math.min(toCall, me.chips);
+        callBtn.textContent = `跟注 ${callAmount}`;
+        callBtn.onclick = () => socket.emit('action', { action: 'call' });
+        callBtn.disabled = me.chips === 0;
+        container.appendChild(callBtn);
+      }
+
+      // Raise
+      if (me.chips > 0) {
+        const raiseDiv = document.createElement('div');
+        raiseDiv.className = 'raise-controls';
+
+        const minRaise = Math.max(state.currentBet + state.minRaise, state.minRaise + me.bet);
+        const maxRaise = me.chips + me.bet;
+        const defaultValue = Math.min(minRaise, maxRaise);
+
+        if (maxRaise >= minRaise) {
+          const slider = document.createElement('input');
+          slider.type = 'range';
+          slider.min = minRaise;
+          slider.max = maxRaise;
+          slider.value = defaultValue;
+          slider.step = 10;
+
+          const valueDisplay = document.createElement('span');
+          valueDisplay.className = 'raise-value';
+          valueDisplay.textContent = defaultValue;
+
+          slider.oninput = () => { valueDisplay.textContent = slider.value; };
+
+          const raiseBtn = document.createElement('button');
+          raiseBtn.className = 'btn btn-raise';
+          raiseBtn.textContent = '加注';
+          raiseBtn.onclick = () => {
+            socket.emit('action', { action: 'raise', amount: parseInt(slider.value) });
+          };
+
+          const allInBtn = document.createElement('button');
+          allInBtn.className = 'btn btn-raise';
+          allInBtn.textContent = `All In ${maxRaise}`;
+          allInBtn.onclick = () => {
+            socket.emit('action', { action: 'raise', amount: maxRaise });
+          };
+
+          raiseDiv.appendChild(slider);
+          raiseDiv.appendChild(valueDisplay);
+          raiseDiv.appendChild(raiseBtn);
+          raiseDiv.appendChild(allInBtn);
+          container.appendChild(raiseDiv);
+        }
+      }
+    }
+
+    function showResult(state) {
+      let overlay = document.getElementById('resultOverlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'resultOverlay';
+        overlay.className = 'result-overlay';
+        document.body.appendChild(overlay);
+      }
+
+      const winner = state.winners[0];
+      const winnerNames = winner.playerIds.map(pid => {
+        const p = state.players.find(pl => pl.id === pid);
+        return p ? p.name : '未知';
+      }).join(', ');
+
+      overlay.innerHTML = `
+        <div class="result-box">
+          <h2>🏆 获胜者</h2>
+          <p>${escapeHtml(winnerNames)}</p>
+          <p class="hand-name">${winner.name}</p>
+          <p>赢得 ${winner.amount} 筹码</p>
+        </div>
+      `;
+    }
+
+    function hideResult() {
+      const overlay = document.getElementById('resultOverlay');
+      if (overlay) overlay.remove();
+    }
+
+    function showWaiting(state) {
+      hideWaiting();
+      const table = document.getElementById('table');
+      const overlay = document.createElement('div');
+      overlay.id = 'waitingOverlay';
+      overlay.className = 'waiting-overlay';
+      overlay.style.position = 'absolute';
+      overlay.style.top = '50%';
+      overlay.style.left = '50%';
+      overlay.style.transform = 'translate(-50%, -50%)';
+      overlay.style.zIndex = '5';
+      const count = state.players.filter(p => p.connected).length;
+      overlay.innerHTML = `
+        <h2>等待玩家加入</h2>
+        <p>当前 ${count} 人在线，至少需要 2 人开始</p>
+        <p style="margin-top:10px;color:#ffd700;">分享房间号让朋友加入: ${currentRoomId}</p>
+      `;
+      table.style.position = 'relative';
+      table.appendChild(overlay);
+    }
+
+    function hideWaiting() {
+      const overlay = document.getElementById('waitingOverlay');
+      if (overlay) overlay.remove();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
