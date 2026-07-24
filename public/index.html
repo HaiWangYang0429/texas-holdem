@@ -67,11 +67,11 @@
     }
     .lobby-card input:focus { border-color: #ffd700; }
     .btn {
-      padding: 12px 24px;
+      padding: 10px 20px;
       border-radius: 8px;
       border: none;
       cursor: pointer;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: bold;
       transition: all 0.2s;
     }
@@ -254,28 +254,58 @@
       flex-wrap: wrap;
     }
     .controls .btn {
-      min-width: 100px;
+      min-width: 90px;
     }
     .btn-fold { background: #d32f2f; color: #fff; }
     .btn-check { background: #4caf50; color: #fff; }
     .btn-call { background: #2196f3; color: #fff; }
     .btn-raise { background: #ff9800; color: #fff; }
-    .btn-fold:hover:not(:disabled), .btn-check:hover:not(:disabled), .btn-call:hover:not(:disabled), .btn-raise:hover:not(:disabled) {
+    .btn-allin { background: #e91e63; color: #fff; }
+    .btn-quick { background: #555; color: #fff; font-size: 13px; padding: 8px 12px; min-width: 60px; }
+    .btn-fold:hover:not(:disabled), .btn-check:hover:not(:disabled), .btn-call:hover:not(:disabled), .btn-raise:hover:not(:disabled), .btn-allin:hover:not(:disabled), .btn-quick:hover:not(:disabled) {
       transform: scale(1.05);
     }
     .raise-controls {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
     }
-    .raise-controls input[type=range] {
-      width: 150px;
+    .raise-input-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
-    .raise-value {
-      min-width: 60px;
-      text-align: center;
-      font-weight: bold;
+    .raise-input {
+      width: 80px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 2px solid #555;
+      background: #1a1a2e;
       color: #ffd700;
+      font-size: 16px;
+      font-weight: bold;
+      text-align: center;
+      outline: none;
+    }
+    .raise-input:focus { border-color: #ffd700; }
+    .raise-btn-sm {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: bold;
+      background: #333;
+      color: #fff;
+      width: 32px;
+      height: 36px;
+    }
+    .raise-btn-sm:hover { background: #555; }
+    .quick-buttons {
+      display: flex;
+      gap: 4px;
     }
     .timer-bar {
       width: 100%;
@@ -308,10 +338,31 @@
       padding: 30px 50px;
       text-align: center;
       border: 2px solid #ffd700;
+      max-width: 500px;
     }
     .result-box h2 { color: #ffd700; font-size: 24px; margin-bottom: 10px; }
-    .result-box p { font-size: 18px; margin-bottom: 8px; }
-    .result-box .hand-name { color: #4caf50; font-size: 20px; font-weight: bold; }
+    .result-box .winner-entry {
+      margin-bottom: 16px;
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+    }
+    .result-box .winner-name { font-size: 18px; margin-bottom: 4px; }
+    .result-box .hand-name { color: #4caf50; font-size: 18px; font-weight: bold; margin-bottom: 4px; }
+    .result-box .win-amount { color: #ffd700; font-size: 16px; }
+    .result-box .winner-cards {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+      margin: 8px 0;
+    }
+    .result-box .winner-cards .card {
+      width: 40px;
+      height: 58px;
+    }
+    .result-box .winner-cards .card .rank { font-size: 13px; }
+    .result-box .winner-cards .card .suit { font-size: 16px; }
+    .result-box .winner-cards .card .rank-bottom { font-size: 13px; }
 
     .phase-label {
       position: absolute;
@@ -332,6 +383,12 @@
     }
     .waiting-overlay h2 { color: #ffd700; margin-bottom: 10px; }
     .waiting-overlay p { color: #aaa; }
+
+    .side-pot-label {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 2px;
+    }
   </style>
 </head>
 <body>
@@ -367,9 +424,6 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const RECONNECT_DELAYS = [1000, 2000, 5000, 10000, 20000, 30000];
-    let reconnectAttempts = 0;
-
     const socket = io({
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -409,7 +463,6 @@
 
     socket.on('connect', () => {
       console.log('Socket connected:', socket.id);
-      reconnectAttempts = 0;
       showStatus('已连接服务器', 'success');
       setTimeout(() => hideStatus(), 1500);
       if (pendingJoin) {
@@ -419,24 +472,20 @@
       }
     });
 
-    socket.on('connect_error', (err) => {
-      console.error('Connection error:', err.message);
+    socket.on('connect_error', () => {
       showStatus('连接服务器失败，正在重连...', 'error');
     });
 
     socket.on('reconnect_attempt', (attempt) => {
-      console.log('Reconnect attempt:', attempt);
       showStatus(`正在重连... (第${attempt}次)`, 'error');
     });
 
-    socket.on('reconnect', (attempt) => {
-      console.log('Reconnected after', attempt, 'attempts');
+    socket.on('reconnect', () => {
       showStatus('重连成功', 'success');
       setTimeout(() => hideStatus(), 1500);
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('Disconnected:', reason);
       if (reason !== 'io client disconnect') {
         showStatus('连接断开，正在重连...', 'error');
       }
@@ -535,8 +584,9 @@
       const community = state.community || [];
       for (let i = 0; i < 5; i++) {
         if (i < community.length) {
-          const isWinning = state.phase === 'showdown' && state.winners[0] && state.winners[0].hand &&
-            state.winners[0].hand.cards && state.winners[0].hand.cards.some(c => c.suit === community[i].suit && c.rank === community[i].rank);
+          const isWinning = state.phase === 'showdown' && state.winners.some(w =>
+            w.hand && w.hand.cards && w.hand.cards.some(c => c.suit === community[i].suit && c.rank === community[i].rank)
+          );
           container.appendChild(createCard(community[i], isWinning));
         } else {
           const ph = document.createElement('div');
@@ -575,25 +625,20 @@
           slot.classList.add('current');
         }
         if (player.folded) slot.classList.add('folded');
-        if (state.phase === 'showdown' && state.winners[0] && state.winners[0].playerIds.includes(player.id)) {
+
+        if (state.phase === 'showdown' && state.winners.some(w => w.playerIds.includes(player.id))) {
           slot.classList.add('winner');
         }
 
         let cardsHTML = '';
         if (player.hand && player.hand.length > 0) {
-          const showCards = player.id === playerId || state.phase === 'showdown' || !player.folded;
-          if (showCards) {
-            player.hand.forEach(card => {
-              const isWinning = state.phase === 'showdown' && state.winners[0] && state.winners[0].hand &&
-                state.winners[0].hand.cards && state.winners[0].hand.cards.some(c => c.suit === card.suit && c.rank === card.rank);
-              const c = createCard(card, isWinning);
-              cardsHTML += c.outerHTML;
-            });
-          } else {
-            for (let i = 0; i < player.hand.length; i++) {
-              cardsHTML += createCardBack().outerHTML;
-            }
-          }
+          player.hand.forEach(card => {
+            const isWinning = state.phase === 'showdown' && state.winners.some(w =>
+              w.hand && w.hand.cards && w.hand.cards.some(c => c.suit === card.suit && c.rank === card.rank)
+            );
+            const c = createCard(card, isWinning);
+            cardsHTML += c.outerHTML;
+          });
         } else if (player.cardCount > 0) {
           for (let i = 0; i < player.cardCount; i++) {
             cardsHTML += createCardBack().outerHTML;
@@ -660,6 +705,7 @@
         } else {
           const btn = document.createElement('button');
           btn.className = 'btn btn-primary';
+          btn.style.maxWidth = '200px';
           btn.textContent = '开始游戏';
           btn.onclick = () => socket.emit('startGame');
           container.appendChild(btn);
@@ -698,49 +744,116 @@
         container.appendChild(callBtn);
       }
 
-      // Raise
+      // Raise controls
       if (me.chips > 0) {
+        const minRaiseTotal = state.currentBet + state.minRaise;
+        const maxRaise = me.chips + me.bet;
+        const canMinRaise = maxRaise >= minRaiseTotal;
+        const defaultValue = canMinRaise ? minRaiseTotal : maxRaise;
+
         const raiseDiv = document.createElement('div');
         raiseDiv.className = 'raise-controls';
 
-        const minRaise = Math.max(state.currentBet + state.minRaise, state.minRaise + me.bet);
-        const maxRaise = me.chips + me.bet;
-        const defaultValue = Math.min(minRaise, maxRaise);
+        // Number input with +/- buttons
+        const inputGroup = document.createElement('div');
+        inputGroup.className = 'raise-input-group';
 
-        if (maxRaise >= minRaise) {
-          const slider = document.createElement('input');
-          slider.type = 'range';
-          slider.min = minRaise;
-          slider.max = maxRaise;
-          slider.value = defaultValue;
-          slider.step = 10;
+        const minusBtn = document.createElement('button');
+        minusBtn.className = 'raise-btn-sm';
+        minusBtn.textContent = '-';
+        minusBtn.onclick = () => {
+          const val = parseInt(raiseInput.value) || 0;
+          raiseInput.value = Math.max(me.bet + 1, val - 10);
+          updateRaiseButtons();
+        };
 
-          const valueDisplay = document.createElement('span');
-          valueDisplay.className = 'raise-value';
-          valueDisplay.textContent = defaultValue;
+        const raiseInput = document.createElement('input');
+        raiseInput.type = 'number';
+        raiseInput.className = 'raise-input';
+        raiseInput.value = defaultValue;
+        raiseInput.min = me.bet + 1;
+        raiseInput.max = maxRaise;
+        raiseInput.oninput = () => updateRaiseButtons();
 
-          slider.oninput = () => { valueDisplay.textContent = slider.value; };
+        const plusBtn = document.createElement('button');
+        plusBtn.className = 'raise-btn-sm';
+        plusBtn.textContent = '+';
+        plusBtn.onclick = () => {
+          const val = parseInt(raiseInput.value) || 0;
+          raiseInput.value = Math.min(maxRaise, val + 10);
+          updateRaiseButtons();
+        };
 
-          const raiseBtn = document.createElement('button');
-          raiseBtn.className = 'btn btn-raise';
-          raiseBtn.textContent = '加注';
-          raiseBtn.onclick = () => {
-            socket.emit('action', { action: 'raise', amount: parseInt(slider.value) });
-          };
+        inputGroup.appendChild(minusBtn);
+        inputGroup.appendChild(raiseInput);
+        inputGroup.appendChild(plusBtn);
+        raiseDiv.appendChild(inputGroup);
 
-          const allInBtn = document.createElement('button');
-          allInBtn.className = 'btn btn-raise';
-          allInBtn.textContent = `All In ${maxRaise}`;
-          allInBtn.onclick = () => {
-            socket.emit('action', { action: 'raise', amount: maxRaise });
-          };
+        // Quick buttons
+        const quickDiv = document.createElement('div');
+        quickDiv.className = 'quick-buttons';
 
-          raiseDiv.appendChild(slider);
-          raiseDiv.appendChild(valueDisplay);
-          raiseDiv.appendChild(raiseBtn);
-          raiseDiv.appendChild(allInBtn);
-          container.appendChild(raiseDiv);
+        if (canMinRaise) {
+          const minBtn = document.createElement('button');
+          minBtn.className = 'btn btn-quick';
+          minBtn.textContent = '最小';
+          minBtn.onclick = () => { raiseInput.value = minRaiseTotal; updateRaiseButtons(); };
+          quickDiv.appendChild(minBtn);
         }
+
+        if (state.pot > 0 && canMinRaise) {
+          const halfPot = Math.min(maxRaise, Math.floor(state.pot / 2) + me.bet);
+          if (halfPot >= minRaiseTotal) {
+            const halfBtn = document.createElement('button');
+            halfBtn.className = 'btn btn-quick';
+            halfBtn.textContent = '½池';
+            halfBtn.onclick = () => { raiseInput.value = halfPot; updateRaiseButtons(); };
+            quickDiv.appendChild(halfBtn);
+          }
+
+          const potBtn = document.createElement('button');
+          potBtn.className = 'btn btn-quick';
+          potBtn.textContent = '池';
+          potBtn.onclick = () => {
+            const potRaise = Math.min(maxRaise, state.pot + me.bet);
+            raiseInput.value = Math.max(minRaiseTotal, potRaise);
+            updateRaiseButtons();
+          };
+          quickDiv.appendChild(potBtn);
+        }
+
+        raiseDiv.appendChild(quickDiv);
+
+        // Raise confirm button
+        const raiseBtn = document.createElement('button');
+        raiseBtn.className = 'btn btn-raise';
+        raiseBtn.textContent = canMinRaise ? '加注' : '全押';
+        raiseBtn.onclick = () => {
+          let val = parseInt(raiseInput.value) || 0;
+          val = Math.max(me.bet + 1, Math.min(val, maxRaise));
+          socket.emit('action', { action: 'raise', amount: val });
+        };
+        raiseDiv.appendChild(raiseBtn);
+
+        container.appendChild(raiseDiv);
+
+        // All In button (always available when chips > 0)
+        const allInBtn = document.createElement('button');
+        allInBtn.className = 'btn btn-allin';
+        allInBtn.textContent = `All In ${maxRaise}`;
+        allInBtn.onclick = () => {
+          socket.emit('action', { action: 'raise', amount: maxRaise });
+        };
+        container.appendChild(allInBtn);
+
+        function updateRaiseButtons() {
+          let val = parseInt(raiseInput.value) || 0;
+          const valid = val > me.bet && val <= maxRaise;
+          raiseBtn.disabled = !valid;
+          raiseBtn.textContent = canMinRaise && val >= minRaiseTotal ? `加注 ${val}` : (val > me.bet ? `全押 ${val}` : '加注');
+        }
+
+        updateRaiseButtons();
       }
     }
 
@@ -753,20 +866,41 @@
         document.body.appendChild(overlay);
       }
 
-      const winner = state.winners[0];
-      const winnerNames = winner.playerIds.map(pid => {
-        const p = state.players.find(pl => pl.id === pid);
-        return p ? p.name : '未知';
-      }).join(', ');
+      let html = '<div class="result-box"><h2>🏆 摊牌结果</h2>';
 
-      overlay.innerHTML = `
-        <div class="result-box">
-          <h2>🏆 获胜者</h2>
-          <p>${escapeHtml(winnerNames)}</p>
-          <p class="hand-name">${winner.name}</p>
-          <p>赢得 ${winner.amount} 筹码</p>
-        </div>
-      `;
+      state.winners.forEach(winner => {
+        const winnerNames = winner.playerIds.map(pid => {
+          const p = state.players.find(pl => pl.id === pid);
+          return p ? escapeHtml(p.name) : '未知';
+        }).join(', ');
+
+        const potLabel = state.winners.length > 1 ? ` (边池${winner.potIndex + 1})` : '';
+
+        let cardsHTML = '';
+        if (winner.hand && winner.hand.cards) {
+          cardsHTML = '<div class="winner-cards">' +
+            winner.hand.cards.map(c => {
+              const card = createCard(c, false);
+              card.style.width = '40px';
+              card.style.height = '58px';
+              return card.outerHTML;
+            }).join('') + '</div>';
+        }
+
+        const handName = winner.hand ? winner.name : winner.name;
+
+        html += `
+          <div class="winner-entry">
+            <div class="winner-name">${winnerNames}${potLabel}</div>
+            ${cardsHTML}
+            <div class="hand-name">${escapeHtml(handName)}</div>
+            <div class="win-amount">赢得 ${winner.amount} 筹码</div>
+          </div>
+        `;
+      });
+
+      html += '</div>';
+      overlay.innerHTML = html;
     }
 
     function hideResult() {
@@ -789,7 +923,7 @@
       overlay.innerHTML = `
         <h2>等待玩家加入</h2>
         <p>当前 ${count} 人在线，至少需要 2 人开始</p>
-        <p style="margin-top:10px;color:#ffd700;">分享房间号让朋友加入: ${currentRoomId}</p>
+        <p style="margin-top:10px;color:#ffd700;">分享房间号让朋友加入: ${escapeHtml(currentRoomId || '')}</p>
       `;
       table.style.position = 'relative';
       table.appendChild(overlay);
