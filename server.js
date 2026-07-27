@@ -9,10 +9,9 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' },
   pingInterval: 10000,
-  pingTimeout: 5000,
+  pingTimeout: 10000,
   transports: ['websocket', 'polling'],
-  allowEIO3: true,
-  maxHttpBufferSize: 1e6,
+  maxHttpBufferSize: 1e5,
   connectTimeout: 30000,
 });
 
@@ -21,10 +20,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 const PORT = process.env.PORT || 3000;
 
 const MAX_PLAYERS = 8;
-const STARTING_CHIPS = 1000;
+const STARTING_CHIPS = 500;
 const SMALL_BLIND = 10;
 const BIG_BLIND = 20;
 const TURN_TIMEOUT = 30000;
+const MAX_BUY_IN = 500;
 
 const rooms = {};
 
@@ -40,11 +40,11 @@ function createRoom(roomId) {
     dealerIndex: -1,
     currentPlayerIndex: -1,
     phase: 'waiting',
-    activePlayers: [],
-    lastRaiserIndex: -1,
     winners: [],
-    roundActions: 0,
     readyPlayers: {},
+    autoStartTimer: null,
+    advanceTimer: null,
+    lastChatTime: {},
   };
 }
 
@@ -55,8 +55,14 @@ function getOrCreateRoom(roomId) {
   return rooms[roomId];
 }
 
+function clearAllTimers(room) {
+  if (room.turnTimer) { clearTimeout(room.turnTimer); room.turnTimer = null; }
+  if (room.advanceTimer) { clearTimeout(room.advanceTimer); room.advanceTimer = null; }
+  if (room.autoStartTimer) { clearTimeout(room.autoStartTimer); room.autoStartTimer = null; }
+}
+
 function buildPlayerPublicData(p, i, room, viewerId) {
-  const showHand = (p.id === viewerId || room.phase === 'showdown') && p.hand;
+  const showHand = (p.id === viewerId || room.phase === 'handEnd') && p.hand;
   return {
     id: p.id,
     name: p.name,
@@ -72,34 +78,62 @@ function buildPlayerPublicData(p, i, room, viewerId) {
     connected: p.connected,
     isSpectator: p.isSpectator || false,
     hasRaised: p.hasRaised || false,
+    lastAction: p.lastAction || null,
     isReady: room.readyPlayers[p.id] || false,
-  };
-}
-
-function buildRoomState(room, viewerId) {
-  return {
-    phase: room.phase,
-    community: room.community,
-    pot: room.pot,
-    currentBet: room.currentBet,
-    minRaise: room.minRaise,
-    dealerIndex: room.dealerIndex,
-    currentPlayerIndex: room.currentPlayerIndex,
-    players: room.players.map((p, i) => buildPlayerPublicData(p, i, room, viewerId)),
-    winners: room.winners,
+    totalBuyIn: p.totalBuyIn || 0,
+    netProfit: p.netProfit !== undefined ? p.netProfit : 0,
+    hasRebuy: p.hasRebuy || false,
   };
 }
 
 function broadcastRoomState(room) {
   const connectedSockets = Array.from(io.sockets.adapter.rooms.get(room.id) || []);
+  const handMap = {};
+  for (const p of room.players) {
+    if (p.hand) handMap[p.id] = p.hand;
+  }
+  const basePlayers = room.players.map((p, i) => {
+    const data = buildPlayerPublicData(p, i, room, null);
+    data.hand = null;
+    return data;
+  });
+  const revealAll = room.phase === 'handEnd';
   for (const sid of connectedSockets) {
-    const state = buildRoomState(room, sid);
-    io.to(sid).emit('gameState', state);
+    const players = basePlayers.map(p =>
+      (p.id === sid || revealAll) && handMap[p.id]
+        ? { ...p, hand: handMap[p.id] }
+        : p
+    );
+    io.to(sid).emit('gameState', {
+      phase: room.phase,
+      community: room.community,
+      pot: room.pot,
+      currentBet: room.currentBet,
+      minRaise: room.minRaise,
+      dealerIndex: room.dealerIndex,
+      currentPlayerIndex: room.currentPlayerIndex,
+      players,
+      winners: room.winners,
+    });
   }
 }
 
 function startNewHand(room) {
+  if (room.phase !== 'waiting' && room.phase !== 'handEnd') return;
+  clearAllTimers(room);
   room.readyPlayers = {};
+
+  room.players.forEach(p => {
+    p.isSpectator = false;
+    p.hand = null;
+    p.bet = 0;
+    p.totalBet = 0;
+    p.folded = false;
+    p.allIn = false;
+    p.lastAction = null;
+    p.hasRaised = false;
+    p.hasRebuy = false;
+  });
 
   const eligiblePlayers = room.players.filter(p => p.connected && !p.isSpectator && p.chips > 0);
   if (eligiblePlayers.length < 2) {
@@ -114,25 +148,6 @@ function startNewHand(room) {
   room.currentBet = 0;
   room.minRaise = BIG_BLIND;
   room.winners = [];
-  room.roundActions = 0;
-  room.lastRaiserIndex = -1;
-
-  room.players.forEach(p => {
-    p.hand = null;
-    p.bet = 0;
-    p.totalBet = 0;
-    p.folded = false;
-    p.allIn = false;
-    p.lastAction = null;
-    p.hasRaised = false;
-  });
-
-  const eligible = room.players.map((p, i) => ({ p, i })).filter(({ p }) => p.connected && !p.isSpectator && p.chips > 0);
-  if (eligible.length < 2) {
-    room.phase = 'waiting';
-    broadcastRoomState(room);
-    return;
-  }
 
   room.dealerIndex = (room.dealerIndex + 1) % room.players.length;
   while (!room.players[room.dealerIndex] || room.players[room.dealerIndex].chips <= 0 || !room.players[room.dealerIndex].connected || room.players[room.dealerIndex].isSpectator) {
@@ -174,11 +189,6 @@ function startNewHand(room) {
   room.currentBet = bbAmount;
   room.pot = sbAmount + bbAmount;
 
-  room.activePlayers = room.players
-    .map((p, i) => ({ p, i }))
-    .filter(({ p }) => p.connected && !p.isSpectator && (p.chips > 0 || p.bet > 0))
-    .map(({ i }) => i);
-
   room.players.forEach((p, i) => {
     if (p.connected && !p.isSpectator && p.chips > 0) {
       p.hand = dealHand(room.deck);
@@ -209,10 +219,12 @@ function startNewHand(room) {
 
 function startTurnTimer(room) {
   if (room.turnTimer) clearTimeout(room.turnTimer);
+  const targetId = room.currentPlayerIndex >= 0 && room.players[room.currentPlayerIndex]
+    ? room.players[room.currentPlayerIndex].id : null;
   room.turnTimer = setTimeout(() => {
-    if (room.phase !== 'waiting' && room.phase !== 'showdown' && room.phase !== 'handEnd' && room.currentPlayerIndex >= 0) {
+    if (room.phase !== 'waiting' && room.phase !== 'handEnd' && room.currentPlayerIndex >= 0) {
       const currentP = room.players[room.currentPlayerIndex];
-      if (currentP && currentP.connected && !currentP.folded && !currentP.allIn) {
+      if (currentP && currentP.id === targetId && currentP.connected && !currentP.folded && !currentP.allIn) {
         handlePlayerAction(room, currentP.id, 'fold');
         broadcastRoomState(room);
       }
@@ -228,7 +240,6 @@ function nextPlayer(room) {
     const p = room.players[next];
     if (p.connected && !p.folded && !p.allIn && p.chips > 0 && !p.isSpectator) {
       room.currentPlayerIndex = next;
-      room.roundActions++;
       broadcastRoomState(room);
       startTurnTimer(room);
       return;
@@ -259,6 +270,9 @@ function isBettingRoundComplete(room) {
 
 function advancePhase(room) {
   if (room.turnTimer) clearTimeout(room.turnTimer);
+  if (room.advanceTimer) { clearTimeout(room.advanceTimer); room.advanceTimer = null; }
+
+  if (room.phase === 'handEnd' || room.phase === 'waiting') return;
 
   if (room.players.filter(p => !p.folded && p.connected && !p.isSpectator).length <= 1) {
     showdown(room);
@@ -272,8 +286,6 @@ function advancePhase(room) {
   });
   room.currentBet = 0;
   room.minRaise = BIG_BLIND;
-  room.roundActions = 0;
-  room.lastRaiserIndex = -1;
 
   if (room.phase === 'preflop') {
     room.phase = 'flop';
@@ -306,7 +318,11 @@ function advancePhase(room) {
 
   const canStillAct = room.players.filter(p => !p.folded && p.connected && !p.allIn && p.chips > 0 && !p.isSpectator);
   if (canStillAct.length <= 1) {
-    setTimeout(() => advancePhase(room), 1500);
+    room.advanceTimer = setTimeout(() => {
+      if (room.phase !== 'handEnd' && room.phase !== 'waiting') {
+        advancePhase(room);
+      }
+    }, 1500);
   } else {
     startTurnTimer(room);
   }
@@ -338,13 +354,13 @@ function calculateSidePots(room) {
 }
 
 function showdown(room) {
-  if (room.turnTimer) clearTimeout(room.turnTimer);
+  clearAllTimers(room);
 
   while (room.community.length < 5) {
     room.community.push(...dealCommunity(room.deck, 1));
   }
 
-  const stillInPlayers = room.players.filter(p => !p.folded && p.connected && p.hand && !p.isSpectator);
+    const stillInPlayers = room.players.filter(p => !p.folded && p.hand && !p.isSpectator);
 
   if (stillInPlayers.length === 0) {
     room.phase = 'handEnd';
@@ -356,6 +372,15 @@ function showdown(room) {
     const winner = stillInPlayers[0];
     winner.chips += room.pot;
     room.winners = [{ playerIds: [winner.id], hand: null, name: '其他玩家弃牌', amount: room.pot, potIndex: 0 }];
+
+    room.players.forEach(p => {
+      if (p.connected && !p.isSpectator && p.chips === 0) {
+        p.chips += MAX_BUY_IN;
+        p.totalBuyIn = (p.totalBuyIn || 0) + MAX_BUY_IN;
+      }
+      p.netProfit = p.chips - STARTING_CHIPS - (p.totalBuyIn || 0);
+    });
+
     room.phase = 'handEnd';
     broadcastRoomState(room);
     return;
@@ -366,7 +391,7 @@ function showdown(room) {
 
   for (let potIdx = 0; potIdx < pots.length; potIdx++) {
     const pot = pots[potIdx];
-    const eligible = pot.eligiblePlayers.filter(p => !p.folded && p.connected && p.hand && !p.isSpectator);
+    const eligible = pot.eligiblePlayers.filter(p => !p.folded && p.hand && !p.isSpectator);
 
     if (eligible.length === 0) continue;
     if (eligible.length === 1) {
@@ -411,10 +436,20 @@ function showdown(room) {
 
   room.winners = allResults;
   room.phase = 'handEnd';
+
+  room.players.forEach(p => {
+    if (p.connected && !p.isSpectator && p.chips === 0) {
+      p.chips += MAX_BUY_IN;
+      p.totalBuyIn = (p.totalBuyIn || 0) + MAX_BUY_IN;
+    }
+    p.netProfit = p.chips - STARTING_CHIPS - (p.totalBuyIn || 0);
+  });
+
   broadcastRoomState(room);
 }
 
 function checkAllReady(room) {
+  if (room.phase !== 'handEnd') return;
   const activePlayers = room.players.filter(p => p.connected && !p.isSpectator && p.chips > 0);
   if (activePlayers.length < 2) {
     room.phase = 'waiting';
@@ -429,7 +464,7 @@ function checkAllReady(room) {
 
 function handlePlayerAction(room, playerId, action, amount) {
   const playerIndex = room.players.findIndex(p => p.id === playerId);
-  if (playerIndex !== room.currentPlayerIndex) return false;
+  if (playerIndex < 0 || playerIndex !== room.currentPlayerIndex) return false;
   if (room.phase === 'waiting' || room.phase === 'showdown' || room.phase === 'handEnd') return false;
 
   const player = room.players[playerIndex];
@@ -453,7 +488,8 @@ function handlePlayerAction(room, playerId, action, amount) {
   } else if (action === 'raise') {
     if (player.hasRaised) return false;
 
-    const totalRequired = amount;
+    if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) return false;
+    const totalRequired = Math.floor(amount);
     if (totalRequired <= player.bet) return false;
     if (totalRequired < room.currentBet + room.minRaise && totalRequired < player.chips + player.bet) return false;
 
@@ -472,10 +508,9 @@ function handlePlayerAction(room, playerId, action, amount) {
             p.lastAction = null;
           }
         });
+        room.minRaise = raiseIncrement;
       }
-      room.minRaise = raiseIncrement;
       room.currentBet = player.bet;
-      room.lastRaiserIndex = playerIndex;
     }
 
     if (player.chips === 0) player.allIn = true;
@@ -498,15 +533,20 @@ io.on('connection', (socket) => {
   console.log('Player connected:', socket.id);
 
   socket.on('joinRoom', ({ roomId, name }) => {
-    const room = getOrCreateRoom(roomId || 'default');
+    const cleanRoom = String(roomId || 'default').slice(0, 30).trim() || 'default';
+    const cleanName = String(name || '').replace(/[\x00-\x1f\x7f]/g, '').slice(0, 12).trim() || `玩家${Date.now() % 1000}`;
+    const room = getOrCreateRoom(cleanRoom);
 
     const isInGame = room.phase !== 'waiting' && room.phase !== 'handEnd';
 
-    const existingIndex = room.players.findIndex(p => p.name === name && !p.connected);
+    const existingIndex = room.players.findIndex(p => p.name === cleanName && !p.connected);
     if (existingIndex >= 0) {
       room.players[existingIndex].id = socket.id;
       room.players[existingIndex].connected = true;
-      room.players[existingIndex].folded = false;
+      if (room.phase === 'waiting' || room.phase === 'handEnd') {
+        room.players[existingIndex].folded = false;
+        room.players[existingIndex].isSpectator = false;
+      }
     } else {
       const existingSocketIndex = room.players.findIndex(p => p.id === socket.id);
       if (existingSocketIndex >= 0) {
@@ -518,7 +558,7 @@ io.on('connection', (socket) => {
         }
         room.players.push({
           id: socket.id,
-          name: name || `玩家${room.players.length + 1}`,
+          name: cleanName,
           chips: STARTING_CHIPS,
           hand: null,
           bet: 0,
@@ -529,6 +569,9 @@ io.on('connection', (socket) => {
           lastAction: null,
           hasRaised: false,
           isSpectator: isInGame,
+          totalBuyIn: 0,
+          netProfit: 0,
+          hasRebuy: false,
         });
       }
     }
@@ -539,7 +582,8 @@ io.on('connection', (socket) => {
     broadcastRoomState(room);
 
     if (room.phase === 'waiting' && room.players.filter(p => p.connected && !p.isSpectator && p.chips > 0).length >= 2) {
-      setTimeout(() => {
+      if (room.autoStartTimer) clearTimeout(room.autoStartTimer);
+      room.autoStartTimer = setTimeout(() => {
         if (room.phase === 'waiting') startNewHand(room);
       }, 2000);
     }
@@ -548,8 +592,29 @@ io.on('connection', (socket) => {
   socket.on('action', ({ action, amount }) => {
     const room = rooms[socket.roomId];
     if (!room) return;
-    handlePlayerAction(room, socket.id, action, amount);
-    broadcastRoomState(room);
+    const wasHandled = handlePlayerAction(room, socket.id, action, amount);
+    if (!wasHandled) {
+      broadcastRoomState(room);
+    }
+  });
+
+  socket.on('chat', ({ message }) => {
+    const room = rooms[socket.roomId];
+    if (!room) return;
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player) return;
+    const now = Date.now();
+    const last = room.lastChatTime[socket.id] || 0;
+    if (now - last < 500) return;
+    room.lastChatTime[socket.id] = now;
+    const text = String(message || '').replace(/[\x00-\x1f\x7f]/g, '').slice(0, 100).trim();
+    if (!text) return;
+    io.to(room.id).emit('chat', {
+      playerId: socket.id,
+      name: player.name,
+      message: text,
+      timestamp: now,
+    });
   });
 
   socket.on('readyForNext', () => {
@@ -559,6 +624,21 @@ io.on('connection', (socket) => {
     room.readyPlayers[socket.id] = true;
     broadcastRoomState(room);
     checkAllReady(room);
+  });
+
+  socket.on('rebuy', ({ amount }) => {
+    const room = rooms[socket.roomId];
+    if (!room) return;
+    if (room.phase !== 'handEnd') return;
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player || player.isSpectator) return;
+    if (player.hasRebuy) return;
+    const rebuyAmount = Math.min(Math.max(1, parseInt(amount) || 0), MAX_BUY_IN);
+    player.chips += rebuyAmount;
+    player.totalBuyIn = (player.totalBuyIn || 0) + rebuyAmount;
+    player.netProfit = player.chips - STARTING_CHIPS - (player.totalBuyIn || 0);
+    player.hasRebuy = true;
+    broadcastRoomState(room);
   });
 
   socket.on('startGame', () => {
@@ -576,11 +656,14 @@ io.on('connection', (socket) => {
 
     const playerIndex = room.players.findIndex(p => p.id === socket.id);
     if (playerIndex >= 0) {
+      const wasAllIn = room.players[playerIndex].allIn;
       room.players[playerIndex].connected = false;
-      room.players[playerIndex].folded = true;
+      if (!wasAllIn) {
+        room.players[playerIndex].folded = true;
+      }
       delete room.readyPlayers[socket.id];
 
-      if (room.currentPlayerIndex === playerIndex && room.phase !== 'waiting' && room.phase !== 'showdown' && room.phase !== 'handEnd') {
+      if (room.currentPlayerIndex === playerIndex && room.phase !== 'waiting' && room.phase !== 'handEnd') {
         if (room.turnTimer) clearTimeout(room.turnTimer);
         if (isBettingRoundComplete(room)) {
           advancePhase(room);
@@ -598,8 +681,26 @@ io.on('connection', (socket) => {
       setTimeout(() => {
         const r = rooms[socket.roomId];
         if (!r) return;
-        r.players = r.players.filter(p => p.connected || p.id !== socket.id);
+        const removingIndex = r.players.findIndex(p => p.id === socket.id);
+        if (removingIndex < 0) return;
+
+        r.players.splice(removingIndex, 1);
+
+        if (r.currentPlayerIndex > removingIndex) r.currentPlayerIndex--;
+        if (r.dealerIndex > removingIndex) r.dealerIndex--;
+        if (r.dealerIndex === removingIndex && r.players.length > 0) {
+          r.dealerIndex = (r.dealerIndex - 1 + r.players.length) % r.players.length;
+        }
+
+        if (r.currentPlayerIndex >= r.players.length && r.players.length > 0) {
+          r.currentPlayerIndex = r.currentPlayerIndex % r.players.length;
+        }
+        if (r.dealerIndex >= r.players.length && r.players.length > 0) {
+          r.dealerIndex = r.dealerIndex % r.players.length;
+        }
+
         if (r.players.length === 0) {
+          clearAllTimers(r);
           delete rooms[r.id];
         } else {
           broadcastRoomState(r);

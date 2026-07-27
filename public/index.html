@@ -16,414 +16,170 @@
     #app {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 20px;
+      padding: 15px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
-    .header {
-      text-align: center;
-      padding: 10px 0 20px;
-    }
-    .header h1 {
-      font-size: 24px;
-      color: #ffd700;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    }
-    .header .info {
-      font-size: 13px;
-      color: #aaa;
-      margin-top: 5px;
-    }
+    .header { text-align: center; padding: 5px 0 10px; }
+    .header h1 { font-size: 22px; color: #ffd700; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    .header .info { font-size: 12px; color: #aaa; margin-top: 4px; }
 
     /* Lobby */
-    .lobby {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 20px;
-    }
-    .lobby-card {
-      background: rgba(0,0,0,0.4);
-      border-radius: 16px;
-      padding: 40px;
-      text-align: center;
-      max-width: 400px;
-      width: 100%;
-    }
+    .lobby { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+    .lobby-card { background: rgba(0,0,0,0.4); border-radius: 16px; padding: 40px; text-align: center; max-width: 400px; width: 100%; }
     .lobby-card h2 { font-size: 20px; margin-bottom: 20px; color: #ffd700; }
-    .lobby-card input {
-      width: 100%;
-      padding: 12px 16px;
-      border-radius: 8px;
-      border: 2px solid #333;
-      background: #1a1a2e;
-      color: #fff;
-      font-size: 16px;
-      margin-bottom: 10px;
-      outline: none;
-    }
+    .lobby-card input { width: 100%; padding: 12px 16px; border-radius: 8px; border: 2px solid #333; background: #1a1a2e; color: #fff; font-size: 16px; margin-bottom: 10px; outline: none; }
     .lobby-card input:focus { border-color: #ffd700; }
-    .btn {
-      padding: 10px 20px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      font-size: 15px;
-      font-weight: bold;
-      transition: all 0.2s;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, #ffd700, #ffa500);
-      color: #333;
-      width: 100%;
-    }
+    .btn { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, #ffd700, #ffa500); color: #333; width: 100%; }
     .btn-primary:hover { transform: scale(1.02); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* Game Table */
-    .game-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
+    /* Game layout */
+    .game-container { flex: 1; display: flex; flex-direction: column; }
+    .game-body { flex: 1; display: flex; gap: 15px; }
+    .game-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .game-side { width: 240px; display: flex; flex-direction: column; gap: 10px; }
+    @media (max-width: 800px) { .game-body { flex-direction: column; } .game-side { width: 100%; } }
+
+    /* Table */
     .table {
-      flex: 1;
-      position: relative;
+      flex: 1; position: relative;
       background: radial-gradient(ellipse at center, #2a8a4a 0%, #1a6b3c 70%, #0d4a28 100%);
-      border-radius: 200px;
-      border: 8px solid #5a3a1a;
-      box-shadow: 0 0 40px rgba(0,0,0,0.6), inset 0 0 60px rgba(0,0,0,0.3);
-      min-height: 400px;
-      margin: 20px 0;
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      border-radius: 50%;
+      border: 6px solid #5a3a1a;
+      box-shadow: 0 0 30px rgba(0,0,0,0.5), inset 0 0 50px rgba(0,0,0,0.2);
+      min-height: 360px; max-width: 600px; margin: 0 auto; width: 100%;
+      aspect-ratio: 1.4;
     }
 
-    /* Community area */
-    .community {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-    }
-    .community-cards {
-      display: flex;
-      gap: 8px;
-      min-height: 100px;
-    }
-    .pot-display {
-      background: rgba(0,0,0,0.5);
-      padding: 6px 20px;
-      border-radius: 20px;
-      font-size: 18px;
-      color: #ffd700;
-      font-weight: bold;
-    }
-
-    /* Card */
-    .card {
-      width: 60px;
-      height: 88px;
-      border-radius: 6px;
-      background: #fff;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 4px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-      position: relative;
-      transition: transform 0.3s;
-    }
-    .card.red { color: #d32f2f; }
-    .card.black { color: #1a1a1a; }
-    .card .rank { font-size: 16px; font-weight: bold; line-height: 1; }
-    .card .suit { font-size: 22px; text-align: center; line-height: 1; }
-    .card .rank-bottom { font-size: 16px; font-weight: bold; text-align: right; transform: rotate(180deg); line-height: 1; }
-    .card.back {
-      background: repeating-linear-gradient(45deg, #4a3060, #4a3060 6px, #3a2548 6px, #3a2548 12px);
-      border: 2px solid #5a4070;
-    }
-    .card.winning {
-      box-shadow: 0 0 20px #ffd700, 0 2px 8px rgba(0,0,0,0.4);
-      transform: translateY(-5px);
-    }
-    .card-placeholder {
-      width: 60px;
-      height: 88px;
-      border: 2px dashed rgba(255,255,255,0.2);
-      border-radius: 6px;
-    }
-
-    /* Players */
-    .players-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-bottom: 10px;
-    }
+    /* Circular player positions */
     .player-slot {
-      background: rgba(0,0,0,0.3);
+      position: absolute;
+      width: 110px;
+      background: rgba(0,0,0,0.35);
       border-radius: 10px;
-      padding: 10px;
+      padding: 6px 8px;
       text-align: center;
       border: 2px solid transparent;
       transition: all 0.3s;
-      position: relative;
+      z-index: 3;
     }
-    .player-slot.current {
-      border-color: #ffd700;
-      box-shadow: 0 0 20px rgba(255,215,0,0.3);
-      animation: pulse 1.5s infinite;
-    }
+    .player-slot.current { border-color: #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.4); animation: pulse 1.5s infinite; }
     .player-slot.folded { opacity: 0.4; }
-    .player-slot.winner {
-      border-color: #4caf50;
-      box-shadow: 0 0 20px rgba(76,175,80,0.5);
+    .player-slot.winner { border-color: #4caf50; box-shadow: 0 0 20px rgba(76,175,80,0.5); animation: winnerGlow 1s infinite; }
+    .player-slot.spectator { opacity: 0.7; border-color: rgba(100,149,237,0.5); }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 20px rgba(255,215,0,0.3); } 50% { box-shadow: 0 0 30px rgba(255,215,0,0.6); } }
+    @keyframes winnerGlow { 0%,100% { box-shadow: 0 0 15px rgba(76,175,80,0.4); } 50% { box-shadow: 0 0 25px rgba(76,175,80,0.8); } }
+    .player-name { font-size: 12px; font-weight: bold; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .player-chips { font-size: 13px; color: #ffd700; }
+    .player-profit { font-size: 10px; margin-top: 1px; }
+    .player-profit.positive { color: #4caf50; } .player-profit.negative { color: #ef5350; } .player-profit.zero { color: #aaa; }
+    .player-bet { font-size: 11px; color: #ff9800; margin-top: 2px; }
+    .player-cards { display: flex; gap: 3px; justify-content: center; margin: 4px 0; min-height: 42px; }
+    .player-cards .card { width: 30px; height: 44px; }
+    .player-cards .card .rank { font-size: 9px; } .player-cards .card .suit { font-size: 12px; } .player-cards .card .rank-bottom { font-size: 9px; }
+    .player-cards .card-placeholder { width: 30px; height: 44px; }
+    .player-action { font-size: 10px; color: #aaa; height: 12px; }
+    .dealer-button { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; background: #fff; color: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; z-index: 4; }
+    .spectator-badge { display: inline-block; background: rgba(100,149,237,0.5); color: #a8c5ff; font-size: 9px; padding: 1px 4px; border-radius: 3px; margin-left: 3px; }
+    .ready-badge { display: inline-block; background: rgba(76,175,80,0.5); color: #a5d6a7; font-size: 9px; padding: 1px 4px; border-radius: 3px; margin-left: 3px; }
+
+    /* Pre-action indicator */
+    .pre-action-indicator { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 9px; padding: 1px 6px; border-radius: 8px; white-space: nowrap; z-index: 5; }
+
+    /* Card */
+    .card {
+      width: 56px; height: 82px; border-radius: 6px; background: #fff;
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.4); position: relative;
+      flex-shrink: 0;
     }
-    .player-slot.spectator {
-      opacity: 0.7;
-      border-color: rgba(100,149,237,0.5);
-    }
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
-      50% { box-shadow: 0 0 30px rgba(255,215,0,0.6); }
-    }
-    .player-name {
-      font-size: 13px;
-      font-weight: bold;
-      margin-bottom: 4px;
-    }
-    .player-chips {
-      font-size: 14px;
-      color: #ffd700;
-    }
-    .player-bet {
-      font-size: 12px;
-      color: #ff9800;
-      margin-top: 2px;
-    }
-    .player-cards {
-      display: flex;
-      gap: 4px;
-      justify-content: center;
-      margin: 6px 0;
-      min-height: 50px;
-    }
-    .player-cards .card {
-      width: 36px;
-      height: 52px;
-    }
-    .player-cards .card .rank { font-size: 11px; }
-    .player-cards .card .suit { font-size: 14px; }
-    .player-cards .card .rank-bottom { font-size: 11px; }
-    .player-cards .card-placeholder {
-      width: 36px;
-      height: 52px;
-    }
-    .player-action {
-      font-size: 11px;
-      color: #aaa;
-      height: 14px;
-    }
-    .dealer-button {
-      position: absolute;
-      top: -6px;
-      right: -6px;
-      width: 22px;
-      height: 22px;
-      background: #fff;
-      color: #333;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: bold;
-    }
-    .spectator-badge {
-      display: inline-block;
-      background: rgba(100,149,237,0.5);
-      color: #a8c5ff;
-      font-size: 10px;
-      padding: 1px 6px;
-      border-radius: 4px;
-      margin-left: 4px;
-    }
-    .ready-badge {
-      display: inline-block;
-      background: rgba(76,175,80,0.5);
-      color: #a5d6a7;
-      font-size: 10px;
-      padding: 1px 6px;
-      border-radius: 4px;
-      margin-left: 4px;
-    }
+    .card.red { color: #d32f2f; } .card.black { color: #1a1a1a; }
+    .card .rank { font-size: 15px; font-weight: bold; line-height: 1; }
+    .card .suit { font-size: 20px; text-align: center; line-height: 1; }
+    .card .rank-bottom { font-size: 15px; font-weight: bold; text-align: right; transform: rotate(180deg); line-height: 1; }
+    .card.back { background: repeating-linear-gradient(45deg, #4a3060, #4a3060 6px, #3a2548 6px, #3a2548 12px); border: 2px solid #5a4070; }
+    .card.winning { box-shadow: 0 0 20px #ffd700, 0 2px 8px rgba(0,0,0,0.4); transform: translateY(-5px); }
+    .card-placeholder { width: 56px; height: 82px; border: 2px dashed rgba(255,255,255,0.15); border-radius: 6px; flex-shrink: 0; }
+
+    /* Deal animation */
+    @keyframes dealIn { from { opacity: 0; transform: translateY(-30px) scale(0.5) rotate(-10deg); } to { opacity: 1; transform: translateY(0) scale(1) rotate(0); } }
+    .card.dealing { animation: dealIn 0.4s ease-out; }
+    @keyframes flipIn { 0% { transform: rotateY(180deg); opacity: 0; } 50% { opacity: 0.5; } 100% { transform: rotateY(0); opacity: 1; } }
+    .card.flipping { animation: flipIn 0.5s ease-out; }
+
+    /* Community area - centered on table */
+    .table-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 2; }
+    .community-cards { display: flex; gap: 6px; min-height: 82px; }
+    .pot-display { background: rgba(0,0,0,0.6); padding: 5px 18px; border-radius: 16px; font-size: 16px; color: #ffd700; font-weight: bold; }
+    .phase-label { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 3px 14px; border-radius: 10px; font-size: 12px; color: #ffd700; letter-spacing: 1px; z-index: 2; }
 
     /* Controls */
-    .controls {
-      background: rgba(0,0,0,0.4);
-      border-radius: 12px;
-      padding: 16px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .controls .btn {
-      min-width: 90px;
-    }
-    .btn-fold { background: #d32f2f; color: #fff; }
-    .btn-check { background: #4caf50; color: #fff; }
-    .btn-call { background: #2196f3; color: #fff; }
-    .btn-raise { background: #ff9800; color: #fff; }
-    .btn-allin { background: #e91e63; color: #fff; }
-    .btn-quick { background: #555; color: #fff; font-size: 13px; padding: 8px 12px; min-width: 60px; }
+    .controls { background: rgba(0,0,0,0.45); border-radius: 12px; padding: 12px; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+    .controls .btn { min-width: 80px; }
+    .btn-fold { background: #d32f2f; color: #fff; } .btn-check { background: #4caf50; color: #fff; }
+    .btn-call { background: #2196f3; color: #fff; } .btn-raise { background: #ff9800; color: #fff; }
+    .btn-allin { background: #e91e63; color: #fff; } .btn-quick { background: #555; color: #fff; font-size: 12px; padding: 7px 10px; min-width: 50px; }
     .btn-ready { background: linear-gradient(135deg, #4caf50, #2e7d32); color: #fff; }
-    .btn-fold:hover:not(:disabled), .btn-check:hover:not(:disabled), .btn-call:hover:not(:disabled), .btn-raise:hover:not(:disabled), .btn-allin:hover:not(:disabled), .btn-quick:hover:not(:disabled), .btn-ready:hover:not(:disabled) {
-      transform: scale(1.05);
-    }
-    .raise-controls {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .raise-input-group {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .raise-input {
-      width: 80px;
-      padding: 8px 10px;
-      border-radius: 6px;
-      border: 2px solid #555;
-      background: #1a1a2e;
-      color: #ffd700;
-      font-size: 16px;
-      font-weight: bold;
-      text-align: center;
-      outline: none;
-    }
+    .btn-pre { font-size: 12px; padding: 6px 10px; min-width: 70px; opacity: 0.6; border: 2px solid transparent; }
+    .btn-pre.active { opacity: 1; border-color: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.4); }
+    .btn-pre.fold-pre { background: #6a1f1f; color: #fff; } .btn-pre.check-pre { background: #2e7d32; color: #fff; }
+    .btn-pre.call-pre { background: #1565c0; color: #fff; } .btn-pre.raise-pre { background: #e65100; color: #fff; }
+    .btn:hover:not(:disabled) { transform: scale(1.05); }
+    .raise-controls { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; justify-content: center; }
+    .raise-input-group { display: flex; align-items: center; gap: 3px; }
+    .raise-input { width: 70px; padding: 7px 8px; border-radius: 6px; border: 2px solid #555; background: #1a1a2e; color: #ffd700; font-size: 15px; font-weight: bold; text-align: center; outline: none; }
     .raise-input:focus { border-color: #ffd700; }
-    .raise-btn-sm {
-      padding: 8px 12px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-size: 18px;
-      font-weight: bold;
-      background: #333;
-      color: #fff;
-      width: 32px;
-      height: 36px;
-    }
+    .raise-btn-sm { padding: 7px 10px; border-radius: 6px; border: none; cursor: pointer; font-size: 16px; font-weight: bold; background: #333; color: #fff; width: 30px; height: 33px; }
     .raise-btn-sm:hover { background: #555; }
-    .quick-buttons {
-      display: flex;
-      gap: 4px;
-    }
-    .timer-bar {
-      width: 100%;
-      height: 4px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 2px;
-      margin-top: 6px;
-      overflow: hidden;
-    }
-    .timer-fill {
-      height: 100%;
-      background: #ffd700;
-      width: 100%;
-      transition: width linear;
-    }
+    .timer-bar { width: 100%; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+    .timer-fill { height: 100%; background: #ffd700; width: 100%; transition: width 0.1s linear; }
+    .timer-fill.urgent { background: #ef5350; animation: timerBlink 0.5s infinite; }
+    @keyframes timerBlink { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
     /* Result overlay */
-    .result-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-    }
-    .result-box {
-      background: linear-gradient(135deg, #1a1a2e, #16213e);
-      border-radius: 16px;
-      padding: 30px 50px;
-      text-align: center;
-      border: 2px solid #ffd700;
-      max-width: 500px;
-    }
-    .result-box h2 { color: #ffd700; font-size: 24px; margin-bottom: 10px; }
-    .result-box .winner-entry {
-      margin-bottom: 16px;
-      padding: 10px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 8px;
-    }
-    .result-box .winner-name { font-size: 18px; margin-bottom: 4px; }
-    .result-box .hand-name { color: #4caf50; font-size: 18px; font-weight: bold; margin-bottom: 4px; }
-    .result-box .win-amount { color: #ffd700; font-size: 16px; }
-    .result-box .winner-cards {
-      display: flex;
-      gap: 4px;
-      justify-content: center;
-      margin: 8px 0;
-    }
-    .result-box .winner-cards .card {
-      width: 40px;
-      height: 58px;
-    }
-    .result-box .winner-cards .card .rank { font-size: 13px; }
-    .result-box .winner-cards .card .suit { font-size: 16px; }
-    .result-box .winner-cards .card .rank-bottom { font-size: 13px; }
+    .result-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: flex-start; justify-content: center; z-index: 50; pointer-events: none; padding-top: 60px; }
+    .result-box { background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 16px; padding: 20px 35px; text-align: center; border: 2px solid #ffd700; max-width: 420px; pointer-events: auto; }
+    .result-box h2 { color: #ffd700; font-size: 22px; margin-bottom: 10px; }
+    .result-box .winner-entry { margin-bottom: 14px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+    .result-box .winner-name { font-size: 17px; margin-bottom: 4px; }
+    .result-box .hand-name { color: #4caf50; font-size: 17px; font-weight: bold; margin-bottom: 4px; }
+    .result-box .win-amount { color: #ffd700; font-size: 15px; }
+    .result-box .winner-cards { display: flex; gap: 4px; justify-content: center; margin: 8px 0; }
+    .result-box .winner-cards .card { width: 38px; height: 55px; }
+    .result-box .winner-cards .card .rank { font-size: 12px; } .result-box .winner-cards .card .suit { font-size: 15px; } .result-box .winner-cards .card .rank-bottom { font-size: 12px; }
 
-    .phase-label {
-      position: absolute;
-      top: 15px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.5);
-      padding: 4px 16px;
-      border-radius: 12px;
-      font-size: 14px;
-      color: #ffd700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .waiting-overlay {
-      text-align: center;
-      padding: 30px;
-    }
+    /* Waiting overlay */
+    .waiting-overlay { text-align: center; padding: 30px; }
     .waiting-overlay h2 { color: #ffd700; margin-bottom: 10px; }
     .waiting-overlay p { color: #aaa; }
+    .spectator-notice { background: rgba(100,149,237,0.2); border: 2px solid rgba(100,149,237,0.5); border-radius: 10px; padding: 10px; text-align: center; margin-bottom: 8px; }
+    .spectator-notice p { color: #a8c5ff; font-size: 13px; }
 
-    .spectator-notice {
-      background: rgba(100,149,237,0.2);
-      border: 2px solid rgba(100,149,237,0.5);
-      border-radius: 12px;
-      padding: 16px;
-      text-align: center;
-      margin-bottom: 10px;
-    }
-    .spectator-notice p {
-      color: #a8c5ff;
-      font-size: 14px;
-    }
+    /* Chat */
+    .chat-panel { background: rgba(0,0,0,0.4); border-radius: 10px; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .chat-header { padding: 8px 12px; font-size: 13px; font-weight: bold; color: #ffd700; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; min-height: 150px; max-height: 250px; }
+    .chat-msg { font-size: 12px; line-height: 1.4; word-break: break-word; }
+    .chat-msg .chat-name { color: #ffd700; font-weight: bold; }
+    .chat-msg .chat-text { color: #ddd; }
+    .chat-msg.system .chat-text { color: #888; font-style: italic; }
+    .chat-input-row { display: flex; gap: 4px; padding: 8px; border-top: 1px solid rgba(255,255,255,0.1); }
+    .chat-input-row input { flex: 1; padding: 7px 10px; border-radius: 6px; border: 1px solid #333; background: #1a1a2e; color: #fff; font-size: 13px; outline: none; }
+    .chat-input-row input:focus { border-color: #ffd700; }
+    .chat-input-row button { padding: 7px 12px; border-radius: 6px; border: none; background: #ffd700; color: #333; font-weight: bold; cursor: pointer; font-size: 13px; }
+    .chat-quick { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 8px 8px; }
+    .chat-quick button { padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: rgba(255,255,255,0.05); color: #ccc; font-size: 11px; cursor: pointer; }
+    .chat-quick button:hover { background: rgba(255,215,0,0.2); }
+
+    /* Sound toggle */
+    .sound-toggle { position: absolute; top: 10px; right: 10px; z-index: 10; background: rgba(0,0,0,0.5); border: 1px solid #555; border-radius: 6px; padding: 4px 10px; color: #fff; cursor: pointer; font-size: 12px; }
   </style>
 </head>
 <body>
   <div id="app">
-    <!-- Lobby -->
     <div id="lobby" class="lobby">
       <div class="lobby-card">
         <h2>🃏 德州扑克</h2>
@@ -434,22 +190,42 @@
       </div>
     </div>
 
-    <!-- Game -->
     <div id="game" class="game-container" style="display:none;">
       <div class="header">
         <h1>🃏 德州扑克</h1>
         <div class="info" id="roomInfo"></div>
       </div>
+      <button class="sound-toggle" id="soundToggle" onclick="toggleSound()">🔊 声音</button>
       <div id="spectatorNotice" style="display:none;"></div>
-      <div class="players-grid" id="playersGrid"></div>
-      <div class="table" id="table">
-        <div class="phase-label" id="phaseLabel"></div>
-        <div class="community">
-          <div class="community-cards" id="communityCards"></div>
-          <div class="pot-display" id="potDisplay"></div>
+      <div class="game-body">
+        <div class="game-main">
+          <div class="table" id="table">
+            <div class="phase-label" id="phaseLabel"></div>
+            <div class="table-center">
+              <div class="community-cards" id="communityCards"></div>
+              <div class="pot-display" id="potDisplay"></div>
+            </div>
+          </div>
+          <div class="controls" id="controls"></div>
+        </div>
+        <div class="game-side">
+          <div class="chat-panel">
+            <div class="chat-header">💬 聊天</div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-quick">
+              <button onclick="sendQuick('好牌！')">好牌！</button>
+              <button onclick="sendQuick('可惜')">可惜</button>
+              <button onclick="sendQuick('GG')">GG</button>
+              <button onclick="sendQuick('666')">666</button>
+              <button onclick="sendQuick('再来')">再来</button>
+            </div>
+            <div class="chat-input-row">
+              <input id="chatInput" type="text" placeholder="输入消息..." maxlength="100" onkeypress="if(event.key==='Enter')sendChat()" />
+              <button onclick="sendChat()">发送</button>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="controls" id="controls"></div>
     </div>
   </div>
 
@@ -457,273 +233,286 @@
   <script>
     const socket = io({
       transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 2000,
-      reconnectionDelayMax: 30000,
-      timeout: 30000,
-      forceNew: true,
+      reconnection: true, reconnectionAttempts: 20,
+      reconnectionDelay: 2000, reconnectionDelayMax: 30000,
+      timeout: 30000, forceNew: true,
     });
 
-    let playerId = null;
-    let currentRoomId = null;
-    let gameState = null;
-    let timerInterval = null;
-    let turnStartTime = 0;
-    let isJoining = false;
-    let pendingJoin = null;
-    let iAmSpectator = false;
+    let playerId = null, currentRoomId = null, gameState = null;
+    let timerInterval = null, turnStartTime = 0;
+    let isJoining = false, pendingJoin = null, iAmSpectator = false;
+    let joinedRoom = null, joinedName = null;
+    let lastCurrentPlayerId = null;
+    let lastCommunityCount = 0, lastPhase = '';
+    let preAction = null;
+    let soundEnabled = true;
+
+    // --- Sound ---
+    const SOUNDS = {};
+    function initSounds() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        function makeBeep(freq, dur, type = 'sine', vol = 0.15) {
+          return () => {
+            if (!soundEnabled || !ctx) return;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.frequency.value = freq; osc.type = type;
+            gain.gain.setValueAtTime(vol, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(ctx.currentTime + dur);
+          };
+        }
+        SOUNDS.turn = makeBeep(880, 0.15, 'sine', 0.12);
+        SOUNDS.deal = makeBeep(600, 0.08, 'square', 0.08);
+        SOUNDS.flip = makeBeep(700, 0.12, 'triangle', 0.1);
+        SOUNDS.win = () => { SOUNDS._beep(523, 0.15)(); setTimeout(() => SOUNDS._beep(659, 0.15)(), 120); setTimeout(() => SOUNDS._beep(784, 0.25)(), 240); };
+        SOUNDS._beep = makeBeep;
+      } catch (e) { console.log('Audio not available'); }
+    }
+    function playSound(name) { if (SOUNDS[name]) SOUNDS[name](); }
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('soundToggle').textContent = soundEnabled ? '🔊 声音' : '🔇 静音';
+    }
 
     function showStatus(message, type) {
-      let statusDiv = document.getElementById('statusMsg');
-      if (!statusDiv) {
-        statusDiv = document.createElement('div');
-        statusDiv.id = 'statusMsg';
-        statusDiv.style.cssText = 'padding:8px 16px;border-radius:8px;text-align:center;margin-top:10px;font-size:14px;';
-        const card = document.querySelector('.lobby-card');
-        if (card) card.appendChild(statusDiv);
-      }
-      statusDiv.style.background = type === 'error' ? 'rgba(211,47,47,0.5)' : type === 'success' ? 'rgba(76,175,80,0.5)' : 'rgba(255,215,0,0.3)';
-      statusDiv.style.color = type === 'error' ? '#ff6b6b' : type === 'success' ? '#81c784' : '#ffd700';
-      statusDiv.textContent = message;
+      let s = document.getElementById('statusMsg');
+      if (!s) { s = document.createElement('div'); s.id = 'statusMsg'; s.style.cssText = 'padding:8px 16px;border-radius:8px;text-align:center;margin-top:10px;font-size:14px;'; const c = document.querySelector('.lobby-card'); if (c) c.appendChild(s); }
+      s.style.background = type === 'error' ? 'rgba(211,47,47,0.5)' : type === 'success' ? 'rgba(76,175,80,0.5)' : 'rgba(255,215,0,0.3)';
+      s.style.color = type === 'error' ? '#ff6b6b' : type === 'success' ? '#81c784' : '#ffd700';
+      s.textContent = message;
     }
-
-    function hideStatus() {
-      const statusDiv = document.getElementById('statusMsg');
-      if (statusDiv) statusDiv.remove();
-    }
+    function hideStatus() { const s = document.getElementById('statusMsg'); if (s) s.remove(); }
 
     socket.on('connect', () => {
-      showStatus('已连接服务器', 'success');
-      setTimeout(() => hideStatus(), 1500);
-      if (pendingJoin) {
-        const { name, room } = pendingJoin;
-        pendingJoin = null;
-        socket.emit('joinRoom', { roomId: room, name });
-      }
+      showStatus('已连接服务器', 'success'); setTimeout(() => hideStatus(), 1500);
+      if (joinedRoom && joinedName) socket.emit('joinRoom', { roomId: joinedRoom, name: joinedName });
+      else if (pendingJoin) { const { name, room } = pendingJoin; pendingJoin = null; socket.emit('joinRoom', { roomId: room, name }); }
     });
+    socket.on('connect_error', () => showStatus('连接服务器失败，正在重连...', 'error'));
+    socket.on('reconnect_attempt', (a) => showStatus(`正在重连... (第${a}次)`, 'error'));
+    socket.on('reconnect', () => { showStatus('重连成功', 'success'); setTimeout(() => hideStatus(), 1500); if (joinedRoom && joinedName) socket.emit('joinRoom', { roomId: joinedRoom, name: joinedName }); });
+    socket.on('disconnect', (r) => { if (r !== 'io client disconnect') showStatus('连接断开，正在重连...', 'error'); });
 
-    socket.on('connect_error', () => {
-      showStatus('连接服务器失败，正在重连...', 'error');
-    });
-
-    socket.on('reconnect_attempt', (attempt) => {
-      showStatus(`正在重连... (第${attempt}次)`, 'error');
-    });
-
-    socket.on('reconnect', () => {
-      showStatus('重连成功', 'success');
-      setTimeout(() => hideStatus(), 1500);
-    });
-
-    socket.on('disconnect', (reason) => {
-      if (reason !== 'io client disconnect') {
-        showStatus('连接断开，正在重连...', 'error');
-      }
-    });
-
-    const PHASE_NAMES = {
-      waiting: '等待中',
-      preflop: '翻牌前',
-      flop: '翻牌',
-      turn: '转牌',
-      river: '河牌',
-      showdown: '摊牌',
-      handEnd: '本局结束',
-    };
-
-    const ACTION_NAMES = {
-      fold: '弃牌',
-      check: '过牌',
-      call: '跟注',
-      raise: '加注',
-    };
+    const PHASE_NAMES = { waiting: '等待中', preflop: '翻牌前', flop: '翻牌', turn: '转牌', river: '河牌', showdown: '摊牌', handEnd: '本局结束' };
+    const ACTION_NAMES = { fold: '弃牌', check: '过牌', call: '跟注', raise: '加注' };
 
     function joinGame() {
       const name = document.getElementById('nameInput').value.trim() || '匿名玩家';
       const room = document.getElementById('roomInput').value.trim() || 'default';
-      currentRoomId = room;
-
-      if (!socket.connected) {
-        showStatus('正在连接服务器，请稍候...', 'error');
-        pendingJoin = { name, room };
-        return;
-      }
-
-      isJoining = true;
-      showStatus('正在加入房间...', 'error');
+      currentRoomId = room; joinedRoom = room; joinedName = name;
+      if (!socket.connected) { showStatus('正在连接服务器，请稍候...', 'error'); pendingJoin = { name, room }; return; }
+      isJoining = true; showStatus('正在加入房间...', 'error');
       socket.emit('joinRoom', { roomId: room, name });
-
-      setTimeout(() => {
-        if (isJoining) {
-          isJoining = false;
-          showStatus('加入房间超时，请重试', 'error');
-        }
-      }, 10000);
+      setTimeout(() => { if (isJoining) { isJoining = false; showStatus('加入房间超时，请重试', 'error'); } }, 10000);
     }
-
-    document.getElementById('nameInput').addEventListener('keypress', e => {
-      if (e.key === 'Enter') joinGame();
-    });
-    document.getElementById('roomInput').addEventListener('keypress', e => {
-      if (e.key === 'Enter') joinGame();
-    });
+    document.getElementById('nameInput').addEventListener('keypress', e => { if (e.key === 'Enter') joinGame(); });
+    document.getElementById('roomInput').addEventListener('keypress', e => { if (e.key === 'Enter') joinGame(); });
 
     socket.on('joined', ({ playerId: pid, roomId, isSpectator }) => {
-      isJoining = false;
-      hideStatus();
-      playerId = pid;
-      iAmSpectator = isSpectator || false;
+      isJoining = false; hideStatus(); playerId = pid; iAmSpectator = isSpectator || false;
       document.getElementById('lobby').style.display = 'none';
       document.getElementById('game').style.display = 'flex';
-      document.getElementById('roomInfo').textContent = `房间: ${roomId} | 玩家ID: ${pid.slice(0, 8)}`;
+      document.getElementById('roomInfo').textContent = `房间: ${roomId}`;
+      if (!SOUNDS.turn) initSounds();
     });
 
-    socket.on('gameState', (state) => {
-      gameState = state;
-      renderGame(state);
+    socket.on('gameState', (state) => { gameState = state; renderGame(state); });
+    socket.on('error', ({ message }) => { isJoining = false; showStatus(message, 'error'); });
+
+    // --- Chat ---
+    socket.on('chat', ({ name, message }) => {
+      const c = document.getElementById('chatMessages');
+      if (!c) return;
+      const d = document.createElement('div');
+      d.className = 'chat-msg';
+      d.innerHTML = `<span class="chat-name">${escapeHtml(name)}:</span> <span class="chat-text">${escapeHtml(message)}</span>`;
+      c.appendChild(d);
+      c.scrollTop = c.scrollHeight;
+      if (c.children.length > 50) c.removeChild(c.firstChild);
     });
 
-    socket.on('error', ({ message }) => {
-      isJoining = false;
-      showStatus(message, 'error');
-    });
+    function sendChat() {
+      const inp = document.getElementById('chatInput');
+      const msg = inp.value.trim();
+      if (!msg) return;
+      socket.emit('chat', { message: msg });
+      inp.value = '';
+    }
+    function sendQuick(msg) { socket.emit('chat', { message: msg }); }
 
+    // --- Game rendering ---
     function renderGame(state) {
       document.getElementById('phaseLabel').textContent = PHASE_NAMES[state.phase] || state.phase;
-      document.getElementById('potDisplay').textContent = `💰 底池: ${state.pot}`;
+      document.getElementById('potDisplay').textContent = `💰 ${state.pot}`;
 
       const myIndex = state.players.findIndex(p => p.id === playerId);
-      if (myIndex >= 0) {
-        iAmSpectator = state.players[myIndex].isSpectator;
-      }
+      if (myIndex >= 0) iAmSpectator = state.players[myIndex].isSpectator;
 
-      const spectatorNotice = document.getElementById('spectatorNotice');
+      const sn = document.getElementById('spectatorNotice');
       if (iAmSpectator && state.phase !== 'handEnd' && state.phase !== 'waiting') {
-        spectatorNotice.style.display = 'block';
-        spectatorNotice.className = 'spectator-notice';
-        spectatorNotice.innerHTML = `<p>👀 你正在观战，本局结束后可参与下一把</p>`;
-      } else {
-        spectatorNotice.style.display = 'none';
-      }
+        sn.style.display = 'block'; sn.className = 'spectator-notice'; sn.innerHTML = '<p>👀 你正在观战，本局结束后可参与下一把</p>';
+      } else { sn.style.display = 'none'; }
 
       renderCommunity(state);
       renderPlayers(state);
       renderControls(state);
 
-      if (state.phase === 'handEnd' && state.winners.length > 0) {
-        showResult(state);
-      } else {
-        hideResult();
+      // Check if it's now my turn and execute pre-action
+      if (preAction && myIndex === state.currentPlayerIndex && state.phase !== 'waiting' && state.phase !== 'handEnd') {
+        const me = state.players[myIndex];
+        if (me && !me.folded && !me.allIn) {
+          if (preAction === 'fold') socket.emit('action', { action: 'fold' });
+          else if (preAction === 'check' && state.currentBet - me.bet === 0) socket.emit('action', { action: 'check' });
+          else if (preAction === 'call' && state.currentBet - me.bet > 0) socket.emit('action', { action: 'call' });
+          preAction = null;
+        }
       }
 
-      if (state.phase === 'waiting') {
-        showWaiting(state);
-      } else {
-        hideWaiting();
+      // Sound: new community cards
+      const communityCount = (state.community || []).length;
+      if (communityCount > lastCommunityCount && lastPhase !== '') playSound('flip');
+      if (state.phase !== lastPhase) {
+        if (state.phase === 'preflop' && lastPhase === 'waiting') setTimeout(() => playSound('deal'), 200);
+        if (state.phase === 'handEnd') playSound('win');
       }
+      lastCommunityCount = communityCount;
+      lastPhase = state.phase;
+
+      if (state.phase === 'handEnd' && state.winners.length > 0) showResult(state); else hideResult();
+      if (state.phase === 'waiting') showWaiting(state); else hideWaiting();
     }
 
     function renderCommunity(state) {
       const container = document.getElementById('communityCards');
-      container.innerHTML = '';
-
       const community = state.community || [];
-      for (let i = 0; i < 5; i++) {
-        if (i < community.length) {
-          const isWinning = state.phase === 'handEnd' && state.winners.some(w =>
-            w.hand && w.hand.cards && w.hand.cards.some(c => c.suit === community[i].suit && c.rank === community[i].rank)
-          );
-          container.appendChild(createCard(community[i], isWinning));
+      const prevCount = container.querySelectorAll('.card:not(.card-placeholder)').length;
+
+      // Rebuild if community decreased or structure changed
+      if (community.length < prevCount || (prevCount === 0 && container.children.length > 0 && community.length === 0)) {
+        container.innerHTML = '';
+      }
+
+      // Fill up to 5 slots
+      while (container.children.length < 5) {
+        const idx = container.children.length;
+        if (idx < community.length) {
+          const isWinning = state.phase === 'handEnd' && state.winners.some(w => w.hand && w.hand.cards && w.hand.cards.some(c => c.suit === community[idx].suit && c.rank === community[idx].rank));
+          const card = createCard(community[idx], isWinning);
+          if (idx >= prevCount) card.classList.add('flipping');
+          container.appendChild(card);
         } else {
-          const ph = document.createElement('div');
-          ph.className = 'card-placeholder';
-          container.appendChild(ph);
+          const ph = document.createElement('div'); ph.className = 'card-placeholder'; container.appendChild(ph);
         }
       }
+
+      // Update existing cards winning state
+      community.forEach((card, i) => {
+        const el = container.children[i];
+        if (el && el.classList.contains('card')) {
+          const isWinning = state.phase === 'handEnd' && state.winners.some(w => w.hand && w.hand.cards && w.hand.cards.some(c => c.suit === card.suit && c.rank === card.rank));
+          if (isWinning) el.classList.add('winning'); else el.classList.remove('winning');
+        }
+      });
     }
 
     function createCard(card, isWinning) {
       const div = document.createElement('div');
       div.className = `card ${card.suit === '♥' || card.suit === '♦' ? 'red' : 'black'}`;
       if (isWinning) div.classList.add('winning');
-      div.innerHTML = `
-        <div class="rank">${card.rank}<span style="font-size:12px;">${card.suit}</span></div>
-        <div class="suit">${card.suit}</div>
-        <div class="rank-bottom">${card.rank}<span style="font-size:12px;">${card.suit}</span></div>
-      `;
+      div.innerHTML = `<div class="rank">${card.rank}<span style="font-size:11px;">${card.suit}</span></div><div class="suit">${card.suit}</div><div class="rank-bottom">${card.rank}<span style="font-size:11px;">${card.suit}</span></div>`;
       return div;
     }
-
-    function createCardBack() {
-      const div = document.createElement('div');
-      div.className = 'card back';
-      return div;
-    }
+    function createCardBack() { const d = document.createElement('div'); d.className = 'card back'; return d; }
 
     function renderPlayers(state) {
-      const grid = document.getElementById('playersGrid');
-      grid.innerHTML = '';
+      const table = document.getElementById('table');
+      // Remove old player slots
+      table.querySelectorAll('.player-slot').forEach(el => el.remove());
 
+      const n = state.players.length;
+      if (n === 0) return;
+
+      // Positions around the oval table
+      const isHeadsUp = n === 2;
       state.players.forEach((player, index) => {
         const slot = document.createElement('div');
         slot.className = 'player-slot';
-        if (player.isCurrent && state.phase !== 'handEnd' && state.phase !== 'waiting') {
-          slot.classList.add('current');
-        }
+        if (player.isCurrent && state.phase !== 'handEnd' && state.phase !== 'waiting') slot.classList.add('current');
         if (player.folded) slot.classList.add('folded');
         if (player.isSpectator) slot.classList.add('spectator');
+        if (state.phase === 'handEnd' && state.winners.some(w => w.playerIds.includes(player.id))) slot.classList.add('winner');
 
-        if (state.phase === 'handEnd' && state.winners.some(w => w.playerIds.includes(player.id))) {
-          slot.classList.add('winner');
-        }
+        // Position around oval
+        const angle = isHeadsUp
+          ? (index === 0 ? -90 : 90)
+          : ((index / n) * 360 - 90);
+        const rad = angle * Math.PI / 180;
+        const rx = 42, ry = 40;
+        const x = 50 + rx * Math.cos(rad);
+        const y = 50 + ry * Math.sin(rad);
+        slot.style.left = `calc(${x}% - 55px)`;
+        slot.style.top = `calc(${y}% - 40px)`;
 
         let cardsHTML = '';
         if (player.hand && player.hand.length > 0) {
           player.hand.forEach(card => {
-            const isWinning = state.phase === 'handEnd' && state.winners.some(w =>
-              w.hand && w.hand.cards && w.hand.cards.some(c => c.suit === card.suit && c.rank === card.rank)
-            );
-            const c = createCard(card, isWinning);
-            cardsHTML += c.outerHTML;
+            const isWinning = state.phase === 'handEnd' && state.winners.some(w => w.hand && w.hand.cards && w.hand.cards.some(c => c.suit === card.suit && c.rank === card.rank));
+            cardsHTML += createCard(card, isWinning).outerHTML;
           });
         } else if (player.cardCount > 0) {
-          for (let i = 0; i < player.cardCount; i++) {
-            cardsHTML += createCardBack().outerHTML;
-          }
-        } else {
-          cardsHTML = '<div></div>';
+          for (let i = 0; i < player.cardCount; i++) cardsHTML += createCardBack().outerHTML;
         }
 
         const actionText = player.lastAction ? ACTION_NAMES[player.lastAction] || player.lastAction : '';
         const dealerHTML = player.isDealer ? '<div class="dealer-button">D</div>' : '';
         const spectatorBadge = player.isSpectator ? '<span class="spectator-badge">观战</span>' : '';
-        const readyBadge = (state.phase === 'handEnd' && player.isReady && !player.isSpectator) ? '<span class="ready-badge">已确认</span>' : '';
+        const readyBadge = (state.phase === 'handEnd' && player.isReady && !player.isSpectator) ? '<span class="ready-badge">✅</span>' : '';
+        const profit = player.netProfit || 0;
+        const profitClass = profit > 0 ? 'positive' : profit < 0 ? 'negative' : 'zero';
+        const profitText = profit > 0 ? `+${profit}` : `${profit}`;
+        const profitHTML = player.isSpectator ? '' : `<div class="player-profit ${profitClass}">${profitText}</div>`;
 
-        slot.innerHTML = `
-          ${dealerHTML}
+        // Pre-action indicator for me
+        const myIndex = state.players.findIndex(p => p.id === playerId);
+        let preIndicator = '';
+        if (preAction && index === myIndex && index !== state.currentPlayerIndex && state.phase !== 'handEnd' && state.phase !== 'waiting' && !player.folded && !player.allIn) {
+          let label = '';
+          if (preAction === 'fold') label = '预选弃牌';
+          else if (preAction === 'check') label = '预选过牌';
+          else if (preAction === 'call') label = '预选跟注';
+          if (label) preIndicator = `<div class="pre-action-indicator" style="background:rgba(255,215,0,0.3);color:#ffd700;">${label}</div>`;
+        }
+
+        slot.innerHTML = `${dealerHTML}
           <div class="player-name">${escapeHtml(player.name)}${player.id === playerId ? ' (你)' : ''}${spectatorBadge}${readyBadge}</div>
-          <div class="player-cards">${cardsHTML}</div>
-          <div class="player-chips">💰 ${player.chips}</div>
+          <div class="player-cards">${cardsHTML || '<div></div>'}</div>
+          <div class="player-chips">💰 ${player.chips}</div>${profitHTML}
           <div class="player-bet">${player.bet > 0 ? `下注: ${player.bet}` : ''}</div>
           <div class="player-action">${actionText}${player.allIn ? ' | All In' : ''}</div>
           ${player.isCurrent && state.phase !== 'handEnd' && state.phase !== 'waiting' ? '<div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>' : ''}
-        `;
+          ${preIndicator}`;
 
-        grid.appendChild(slot);
+        table.appendChild(slot);
       });
 
       const currentPlayer = state.players[state.currentPlayerIndex];
       if (currentPlayer && currentPlayer.isCurrent && state.phase !== 'handEnd' && state.phase !== 'waiting') {
-        startTimer();
-      }
+        const phaseChanged = lastPhase !== state.phase;
+        if (currentPlayer.id !== lastCurrentPlayerId || phaseChanged) {
+          lastCurrentPlayerId = currentPlayer.id;
+          startTimer();
+          if (currentPlayer.id === playerId && currentPlayer.id !== lastCurrentPlayerId) playSound('turn');
+        }
+      } else { lastCurrentPlayerId = null; }
     }
 
     function startTimer() {
       if (timerInterval) clearInterval(timerInterval);
       turnStartTime = Date.now();
       const duration = 30000;
-
       timerInterval = setInterval(() => {
         const elapsed = Date.now() - turnStartTime;
         const remaining = Math.max(0, duration - elapsed);
@@ -732,268 +521,174 @@
         if (fill) {
           fill.style.width = pct + '%';
           fill.style.transition = 'width 0.1s linear';
-        } else {
-          clearInterval(timerInterval);
-        }
+          if (remaining <= 5000) fill.classList.add('urgent'); else fill.classList.remove('urgent');
+        } else { clearInterval(timerInterval); }
       }, 100);
     }
 
     function renderControls(state) {
       const container = document.getElementById('controls');
       container.innerHTML = '';
-
       const myIndex = state.players.findIndex(p => p.id === playerId);
       if (myIndex < 0) return;
-
       const me = state.players[myIndex];
 
-      // handEnd phase: show ready button
       if (state.phase === 'handEnd') {
-        if (iAmSpectator) {
-          container.innerHTML = `<p style="color:#aaa;">本局已结束，等待玩家确认开始下一局...</p>`;
-          return;
-        }
-        if (me.chips <= 0) {
-          container.innerHTML = `<p style="color:#aaa;">你的筹码已用完</p>`;
-          return;
-        }
-        if (me.isReady) {
-          container.innerHTML = `<p style="color:#4caf50;">✅ 你已确认，等待其他玩家...</p>`;
-        } else {
-          const readyBtn = document.createElement('button');
-          readyBtn.className = 'btn btn-ready';
-          readyBtn.textContent = '确认开始下一局';
-          readyBtn.onclick = () => socket.emit('readyForNext');
-          container.appendChild(readyBtn);
-        }
-        return;
+        if (iAmSpectator) { container.innerHTML = '<p style="color:#aaa;">本局已结束，等待玩家确认...</p>'; return; }
+        if (me.chips <= 0) { container.innerHTML = '<p style="color:#aaa;">你的筹码已用完</p>'; return; }
+        let html = '';
+        if (!me.hasRebuy) {
+          html += `<div class="raise-controls"><span style="font-size:12px;color:#aaa;">补码:</span>
+            <div class="raise-input-group">
+              <button class="raise-btn-sm" onclick="rebuyAdjust(-50)">-</button>
+              <input type="number" id="rebuyInput" class="raise-input" value="100" min="1" max="500" style="width:60px;" />
+              <button class="raise-btn-sm" onclick="rebuyAdjust(50)">+</button>
+            </div><button class="btn btn-raise" onclick="doRebuy()">补码</button></div>`;
+        } else { html += '<p style="color:#aaa;font-size:12px;">本轮已补码，等待下局</p>'; }
+        if (me.isReady) html += '<p style="color:#4caf50;margin-left:8px;">✅ 已确认</p>';
+        else html += '<button class="btn btn-ready" onclick="socket.emit(\'readyForNext\')">确认开始下一局</button>';
+        container.innerHTML = html; return;
       }
 
-      if (iAmSpectator) {
-        container.innerHTML = `<p style="color:#aaa;">你正在观战，本局结束后可参与下一把</p>`;
-        return;
-      }
+      if (iAmSpectator) { container.innerHTML = '<p style="color:#aaa;">你正在观战，本局结束后可参与下一把</p>'; return; }
 
       if (state.phase === 'waiting') {
         const count = state.players.filter(p => p.connected && !p.isSpectator).length;
-        if (count < 2) {
-          container.innerHTML = `<p style="color:#aaa;">等待其他玩家加入... (当前${count}人, 至少需要2人)</p>`;
-        } else {
-          const btn = document.createElement('button');
-          btn.className = 'btn btn-primary';
-          btn.style.maxWidth = '200px';
-          btn.textContent = '开始游戏';
-          btn.onclick = () => socket.emit('startGame');
-          container.appendChild(btn);
-        }
+        if (count < 2) { container.innerHTML = `<p style="color:#aaa;">等待其他玩家加入... (当前${count}人, 至少需要2人)</p>`; }
+        else { const b = document.createElement('button'); b.className = 'btn btn-primary'; b.style.maxWidth = '180px'; b.textContent = '开始游戏'; b.onclick = () => socket.emit('startGame'); container.appendChild(b); }
         return;
       }
 
       const isMyTurn = myIndex === state.currentPlayerIndex && state.phase !== 'waiting' && state.phase !== 'handEnd';
+      const toCall = state.currentBet - me.bet;
 
       if (!isMyTurn || me.folded || me.allIn) {
-        container.innerHTML = `<p style="color:#aaa;">${me.folded ? '你已弃牌' : me.allIn ? '你已All In' : '等待其他玩家...'}</p>`;
+        // Show pre-action buttons if not my turn and I'm still in the game
+        if (!me.folded && !me.allIn && !me.isSpectator && state.phase !== 'handEnd') {
+          const preDiv = document.createElement('div');
+          preDiv.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;width:100%;';
+          preDiv.innerHTML = '<span style="font-size:12px;color:#aaa;">预选:</span>';
+
+          const foldPre = document.createElement('button');
+          foldPre.className = 'btn btn-pre fold-pre';
+          foldPre.textContent = '弃牌';
+          foldPre.onclick = () => { preAction = preAction === 'fold' ? null : 'fold'; renderControls(state); };
+          if (preAction === 'fold') foldPre.classList.add('active');
+          preDiv.appendChild(foldPre);
+
+          if (toCall === 0) {
+            const checkPre = document.createElement('button');
+            checkPre.className = 'btn btn-pre check-pre';
+            checkPre.textContent = '过牌';
+            checkPre.onclick = () => { preAction = preAction === 'check' ? null : 'check'; renderControls(state); };
+            if (preAction === 'check') checkPre.classList.add('active');
+            preDiv.appendChild(checkPre);
+          } else {
+            const callPre = document.createElement('button');
+            callPre.className = 'btn btn-pre call-pre';
+            callPre.textContent = `跟注 ${Math.min(toCall, me.chips)}`;
+            callPre.onclick = () => { preAction = preAction === 'call' ? null : 'call'; renderControls(state); };
+            if (preAction === 'call') callPre.classList.add('active');
+            preDiv.appendChild(callPre);
+          }
+
+          container.appendChild(preDiv);
+        } else {
+          container.innerHTML = `<p style="color:#aaa;">${me.folded ? '你已弃牌' : me.allIn ? '你已All In' : '等待其他玩家...'}</p>`;
+        }
         return;
       }
 
-      const toCall = state.currentBet - me.bet;
+      // My turn - clear pre-action
+      preAction = null;
 
-      // Fold
       const foldBtn = document.createElement('button');
-      foldBtn.className = 'btn btn-fold';
-      foldBtn.textContent = '弃牌';
+      foldBtn.className = 'btn btn-fold'; foldBtn.textContent = '弃牌';
       foldBtn.onclick = () => socket.emit('action', { action: 'fold' });
       container.appendChild(foldBtn);
 
-      // Check / Call
       if (toCall === 0) {
-        const checkBtn = document.createElement('button');
-        checkBtn.className = 'btn btn-check';
-        checkBtn.textContent = '过牌';
-        checkBtn.onclick = () => socket.emit('action', { action: 'check' });
-        container.appendChild(checkBtn);
+        const checkBtn = document.createElement('button'); checkBtn.className = 'btn btn-check'; checkBtn.textContent = '过牌';
+        checkBtn.onclick = () => socket.emit('action', { action: 'check' }); container.appendChild(checkBtn);
       } else {
-        const callBtn = document.createElement('button');
-        callBtn.className = 'btn btn-call';
-        const callAmount = Math.min(toCall, me.chips);
-        callBtn.textContent = `跟注 ${callAmount}`;
-        callBtn.onclick = () => socket.emit('action', { action: 'call' });
-        callBtn.disabled = me.chips === 0;
-        container.appendChild(callBtn);
+        const callBtn = document.createElement('button'); callBtn.className = 'btn btn-call';
+        const callAmount = Math.min(toCall, me.chips); callBtn.textContent = `跟注 ${callAmount}`;
+        callBtn.onclick = () => socket.emit('action', { action: 'call' }); callBtn.disabled = me.chips === 0; container.appendChild(callBtn);
       }
 
-      // Raise controls
       if (me.chips > 0 && !me.hasRaised) {
-        const minRaiseTotal = state.currentBet + state.minRaise;
-        const maxRaise = me.chips + me.bet;
-        const canMinRaise = maxRaise >= minRaiseTotal;
-        const defaultValue = canMinRaise ? minRaiseTotal : maxRaise;
+        const minRaiseTotal = state.currentBet + state.minRaise; const maxRaise = me.chips + me.bet;
+        const canMinRaise = maxRaise >= minRaiseTotal; const defaultValue = canMinRaise ? minRaiseTotal : maxRaise;
+        const raiseDiv = document.createElement('div'); raiseDiv.className = 'raise-controls';
+        const inputGroup = document.createElement('div'); inputGroup.className = 'raise-input-group';
 
-        const raiseDiv = document.createElement('div');
-        raiseDiv.className = 'raise-controls';
+        const minusBtn = document.createElement('button'); minusBtn.className = 'raise-btn-sm'; minusBtn.textContent = '-';
+        const raiseInput = document.createElement('input'); raiseInput.type = 'number'; raiseInput.className = 'raise-input';
+        raiseInput.value = defaultValue; raiseInput.min = me.bet + 1; raiseInput.max = maxRaise;
+        const plusBtn = document.createElement('button'); plusBtn.className = 'raise-btn-sm'; plusBtn.textContent = '+';
+        minusBtn.onclick = () => { raiseInput.value = Math.max(me.bet + 1, (parseInt(raiseInput.value) || 0) - 10); updateRaiseBtns(); };
+        plusBtn.onclick = () => { raiseInput.value = Math.min(maxRaise, (parseInt(raiseInput.value) || 0) + 10); updateRaiseBtns(); };
+        raiseInput.oninput = () => updateRaiseBtns();
 
-        // Number input with +/- buttons
-        const inputGroup = document.createElement('div');
-        inputGroup.className = 'raise-input-group';
-
-        const minusBtn = document.createElement('button');
-        minusBtn.className = 'raise-btn-sm';
-        minusBtn.textContent = '-';
-        minusBtn.onclick = () => {
-          const val = parseInt(raiseInput.value) || 0;
-          raiseInput.value = Math.max(me.bet + 1, val - 10);
-          updateRaiseButtons();
-        };
-
-        const raiseInput = document.createElement('input');
-        raiseInput.type = 'number';
-        raiseInput.className = 'raise-input';
-        raiseInput.value = defaultValue;
-        raiseInput.min = me.bet + 1;
-        raiseInput.max = maxRaise;
-        raiseInput.oninput = () => updateRaiseButtons();
-
-        const plusBtn = document.createElement('button');
-        plusBtn.className = 'raise-btn-sm';
-        plusBtn.textContent = '+';
-        plusBtn.onclick = () => {
-          const val = parseInt(raiseInput.value) || 0;
-          raiseInput.value = Math.min(maxRaise, val + 10);
-          updateRaiseButtons();
-        };
-
-        inputGroup.appendChild(minusBtn);
-        inputGroup.appendChild(raiseInput);
-        inputGroup.appendChild(plusBtn);
+        inputGroup.appendChild(minusBtn); inputGroup.appendChild(raiseInput); inputGroup.appendChild(plusBtn);
         raiseDiv.appendChild(inputGroup);
 
-        // Quick button: min only
         if (canMinRaise) {
-          const quickDiv = document.createElement('div');
-          quickDiv.className = 'quick-buttons';
-          const minBtn = document.createElement('button');
-          minBtn.className = 'btn btn-quick';
-          minBtn.textContent = '最小';
-          minBtn.onclick = () => { raiseInput.value = minRaiseTotal; updateRaiseButtons(); };
-          quickDiv.appendChild(minBtn);
-          raiseDiv.appendChild(quickDiv);
+          const minBtn = document.createElement('button'); minBtn.className = 'btn btn-quick'; minBtn.textContent = '最小';
+          minBtn.onclick = () => { raiseInput.value = minRaiseTotal; updateRaiseBtns(); };
+          raiseDiv.appendChild(minBtn);
         }
 
-        // Raise confirm button
-        const raiseBtn = document.createElement('button');
-        raiseBtn.className = 'btn btn-raise';
+        const raiseBtn = document.createElement('button'); raiseBtn.className = 'btn btn-raise';
         raiseBtn.textContent = canMinRaise ? '加注' : '全押';
-        raiseBtn.onclick = () => {
-          let val = parseInt(raiseInput.value) || 0;
-          val = Math.max(me.bet + 1, Math.min(val, maxRaise));
-          socket.emit('action', { action: 'raise', amount: val });
-        };
-        raiseDiv.appendChild(raiseBtn);
+        raiseBtn.onclick = () => { let v = parseInt(raiseInput.value) || 0; v = Math.max(me.bet + 1, Math.min(v, maxRaise)); socket.emit('action', { action: 'raise', amount: v }); };
+        raiseDiv.appendChild(raiseBtn); container.appendChild(raiseDiv);
 
-        container.appendChild(raiseDiv);
-
-        // All In button (always available when chips > 0)
-        const allInBtn = document.createElement('button');
-        allInBtn.className = 'btn btn-allin';
+        const allInBtn = document.createElement('button'); allInBtn.className = 'btn btn-allin';
         allInBtn.textContent = `All In ${maxRaise}`;
-        allInBtn.onclick = () => {
-          socket.emit('action', { action: 'raise', amount: maxRaise });
-        };
+        allInBtn.onclick = () => socket.emit('action', { action: 'raise', amount: maxRaise });
         container.appendChild(allInBtn);
 
-        function updateRaiseButtons() {
-          let val = parseInt(raiseInput.value) || 0;
-          const valid = val > me.bet && val <= maxRaise;
+        function updateRaiseBtns() {
+          let v = parseInt(raiseInput.value) || 0; const valid = v > me.bet && v <= maxRaise;
           raiseBtn.disabled = !valid;
-          raiseBtn.textContent = canMinRaise && val >= minRaiseTotal ? `加注 ${val}` : (val > me.bet ? `全押 ${val}` : '加注');
+          raiseBtn.textContent = canMinRaise && v >= minRaiseTotal ? `加注 ${v}` : (v > me.bet ? `全押 ${v}` : '加注');
         }
-
-        updateRaiseButtons();
+        updateRaiseBtns();
       } else if (me.hasRaised && me.chips > 0) {
-        container.innerHTML += `<p style="color:#aaa;width:100%;margin-top:8px;">本轮你已加注过，只能跟注或弃牌</p>`;
+        container.innerHTML += '<p style="color:#aaa;width:100%;margin-top:6px;font-size:12px;">本轮你已加注过，只能跟注或弃牌</p>';
       }
     }
 
     function showResult(state) {
-      let overlay = document.getElementById('resultOverlay');
-      if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'resultOverlay';
-        overlay.className = 'result-overlay';
-        document.body.appendChild(overlay);
-      }
-
+      let o = document.getElementById('resultOverlay');
+      if (!o) { o = document.createElement('div'); o.id = 'resultOverlay'; o.className = 'result-overlay'; document.body.appendChild(o); }
       let html = '<div class="result-box"><h2>🏆 摊牌结果</h2>';
-
       state.winners.forEach(winner => {
-        const winnerNames = winner.playerIds.map(pid => {
-          const p = state.players.find(pl => pl.id === pid);
-          return p ? escapeHtml(p.name) : '未知';
-        }).join(', ');
-
+        const names = winner.playerIds.map(pid => { const p = state.players.find(pl => pl.id === pid); return p ? escapeHtml(p.name) : '未知'; }).join(', ');
         const potLabel = state.winners.length > 1 ? ` (边池${winner.potIndex + 1})` : '';
-
         let cardsHTML = '';
-        if (winner.hand && winner.hand.cards) {
-          cardsHTML = '<div class="winner-cards">' +
-            winner.hand.cards.map(c => {
-              const card = createCard(c, false);
-              card.style.width = '40px';
-              card.style.height = '58px';
-              return card.outerHTML;
-            }).join('') + '</div>';
-        }
-
-        html += `
-          <div class="winner-entry">
-            <div class="winner-name">${winnerNames}${potLabel}</div>
-            ${cardsHTML}
-            <div class="hand-name">${escapeHtml(winner.name)}</div>
-            <div class="win-amount">赢得 ${winner.amount} 筹码</div>
-          </div>
-        `;
+        if (winner.hand && winner.hand.cards) cardsHTML = '<div class="winner-cards">' + winner.hand.cards.map(c => { const card = createCard(c, false); card.style.width = '38px'; card.style.height = '55px'; return card.outerHTML; }).join('') + '</div>';
+        html += `<div class="winner-entry"><div class="winner-name">${names}${potLabel}</div>${cardsHTML}<div class="hand-name">${escapeHtml(winner.name)}</div><div class="win-amount">赢得 ${winner.amount} 筹码</div></div>`;
       });
-
-      html += '</div>';
-      overlay.innerHTML = html;
+      html += '</div>'; o.innerHTML = html;
     }
-
-    function hideResult() {
-      const overlay = document.getElementById('resultOverlay');
-      if (overlay) overlay.remove();
-    }
+    function hideResult() { const o = document.getElementById('resultOverlay'); if (o) o.remove(); }
 
     function showWaiting(state) {
       hideWaiting();
       const table = document.getElementById('table');
-      const overlay = document.createElement('div');
-      overlay.id = 'waitingOverlay';
-      overlay.className = 'waiting-overlay';
-      overlay.style.position = 'absolute';
-      overlay.style.top = '50%';
-      overlay.style.left = '50%';
-      overlay.style.transform = 'translate(-50%, -50%)';
-      overlay.style.zIndex = '5';
+      const o = document.createElement('div'); o.id = 'waitingOverlay'; o.className = 'waiting-overlay';
+      o.style.cssText += 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;';
       const count = state.players.filter(p => p.connected && !p.isSpectator).length;
-      overlay.innerHTML = `
-        <h2>等待玩家加入</h2>
-        <p>当前 ${count} 人在线，至少需要 2 人开始</p>
-        <p style="margin-top:10px;color:#ffd700;">分享房间号让朋友加入: ${escapeHtml(currentRoomId || '')}</p>
-      `;
-      table.style.position = 'relative';
-      table.appendChild(overlay);
+      o.innerHTML = `<h2>等待玩家加入</h2><p>当前 ${count} 人在线，至少需要 2 人开始</p><p style="margin-top:8px;color:#ffd700;">分享房间号让朋友加入: ${escapeHtml(currentRoomId || '')}</p>`;
+      table.appendChild(o);
     }
+    function hideWaiting() { const o = document.getElementById('waitingOverlay'); if (o) o.remove(); }
 
-    function hideWaiting() {
-      const overlay = document.getElementById('waitingOverlay');
-      if (overlay) overlay.remove();
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
+    function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
+    function rebuyAdjust(delta) { const i = document.getElementById('rebuyInput'); if (!i) return; let v = parseInt(i.value) || 0; v = Math.max(1, Math.min(500, v + delta)); i.value = v; }
+    function doRebuy() { const i = document.getElementById('rebuyInput'); if (!i) return; let v = parseInt(i.value) || 0; v = Math.max(1, Math.min(500, v)); socket.emit('rebuy', { amount: v }); }
   </script>
 </body>
 </html>
